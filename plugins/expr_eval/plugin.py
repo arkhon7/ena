@@ -19,6 +19,7 @@ TEST_GUILDS = [938346141723033600, 938374580244979764]
 @lightbulb.implements(lightbulb.SlashCommand)
 async def _calc(context: lightbulb.Context):
     # create loader here
+
     user_id: str = str(context.user.id)
     if expr := context.options.expr:
         resp = await expr_eval.calculate(expr, user_id)
