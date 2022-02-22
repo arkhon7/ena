@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import hashlib
 import logging
+import traceback
 import simpleeval as se
 
 from plugins.expr_eval.entities import (
@@ -17,6 +18,7 @@ from plugins.expr_eval.entities import (
     DuplicateMacroError,
     InvalidNameError,
     EnaResponse,
+    NameNotDefinedError,
 )
 
 from plugins.cache import EnaCache
@@ -90,6 +92,14 @@ class EnaExpr:
 
         except KeywordNameError as e:
             return EnaResponse(error=e)
+
+        except NameNotDefinedError as e:
+            return EnaResponse(error=e)
+
+        except Exception as e:
+            # for unhandled exceptions
+            tb = traceback.format_exc(limit=2)
+            return EnaResponse(message=f"```{tb}```")  # type: ignore
 
     async def read_macro(self, macro_id: str) -> Dict:
         db = self.conn.ena_expr_eval_database

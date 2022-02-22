@@ -270,15 +270,25 @@ class MacroLock:
         else:
             test_str = f"{self.caller}()"
 
-        try:
-            env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
+        # try:
+        #     env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
 
-        except se.NameNotDefined as e:
-            raise NameNotDefinedError(ref=e)
+        #     logging.debug(f" testing: {self.formula}")
+        #     se.simple_eval(test_str, functions=env_data)
+        #     logging.debug(f"PASSED: {self.formula}")
+
+        # except se.NameNotDefined as e:
+        #     raise NameNotDefinedError(ref=e)
+
+
+        env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
 
         logging.debug(f" testing: {self.formula}")
         se.simple_eval(test_str, functions=env_data)
         logging.debug(f"PASSED: {self.formula}")
+
+
+        
 
     # tests
     def is_char(self, raw_result: str) -> Optional[bool]:
@@ -351,7 +361,10 @@ class KeywordNameError(EnaError):
 
 # evaluation errors
 class NameNotDefinedError(EnaError):
-    def __init__(self, ref: Exception) -> None:
+    def __init__(self, ref: se.NameNotDefined) -> None:
         super().__init__()
         self.ref = ref
-        self.message = f"__{self.ref}__ is an invalid ex"
+        self.message = (
+            f"Your formula __{self.ref.expression}__ is using __{self.ref.name}__ which is not "
+            f"a macro, is this a variable? If so, please write it like this ```{{{self.ref.name}}}```"
+        )
