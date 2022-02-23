@@ -21,14 +21,16 @@ class EnaCache:
         if cache:
             """Updates cache if cache key exists"""
 
-            logging.debug(f"cache detected with key '{key}', updating cache instead.")
+            logging.debug(f"cache detected with key '{key}'")
             try:
                 cache[field_key][data_key] = data
+                logging.debug(f"cache path {field_key}:{data_key} found, updated cache path instead.")
                 await self.cache_data.set(key=key, value=cache, ttl=3600)
 
             except KeyError:
                 cache[field_key] = dict()
                 cache[field_key][data_key] = data
+                logging.debug(f"cache path {field_key}:{data_key} not found, added cache path instead.")
                 await self.cache_data.set(key=key, value=cache, ttl=3600)
 
         else:
@@ -48,7 +50,7 @@ class EnaCache:
 
         try:
             data = cache[field_key][data_key]
-            logging.debug(f" retrieved cache info: [{key}:{field_key}:{data_key}]")
+            logging.debug(f" cache hit: [{key}:{field_key}:{data_key}]")
             return data
 
         except KeyError:

@@ -10,7 +10,7 @@ logging = logging.getLogger(__name__)  # type: ignore
 expr_eval = EnaExpr()
 
 
-TEST_GUILDS = [938346141723033600, 938374580244979764]
+TEST_GUILDS = [938346141723033600, 938374580244979764, 880968014500069506]
 
 
 @expr_eval_plugin.command
@@ -101,7 +101,9 @@ async def _my(context: lightbulb.Context):
 )
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_macros(context: lightbulb.Context):
-    pass
+    user_id: str = str(context.user.id)
+    user_macros = await expr_eval.fetch_macros(user_id=user_id)
+    print(user_macros)
 
 
 @_my.child
@@ -112,7 +114,9 @@ async def _my_macros(context: lightbulb.Context):
 )
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_environment(context: lightbulb.Context):
-    pass
+    user_id: str = str(context.user.id)
+    user_environment = await expr_eval.fetch_environment(user_id=user_id)
+    print(user_environment)
 
 
 @_my.child
@@ -123,4 +127,6 @@ async def _my_environment(context: lightbulb.Context):
 )
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_packages(context: lightbulb.Context):
-    pass
+    user_id: str = str(context.user.id)
+    user_packages = await expr_eval.fetch_packages(user_id=user_id)
+    print(user_packages)

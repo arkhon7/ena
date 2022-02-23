@@ -158,30 +158,48 @@ class EnaExpr:
         logging.debug(f" Updated env of '{user_id}' with query: {query}")
 
     async def fetch_macros(self, user_id: str) -> EnaResponse:
+
         db = self.conn.ena_expr_eval_database
         collec = db.macros
 
-        raw_macros = await collec.find({"owner_id": user_id})
+        if await self.cache.is_cached(key=user_id, field_key="calc", data_key="macros"):
+            cached_macros: List[Macro] = await self.cache.get_cache(key=user_id, field_key="calc", data_key="macros")
 
-        if raw_macros:
-            macros: List[Macro] = [from_dict(Macro, raw_macro) for raw_macro in raw_macros]
-            return EnaResponse(data=macros)
+            return EnaResponse(message=f"fetched macros: {cached_macros}", data=cached_macros)
 
         else:
-            return EnaResponse(message=f"user {user_id} has no packages!", data=None)
+            raw_macros = collec.find({"owner_id": user_id})
+            if raw_macros:
+                macros: List[Macro] = [from_dict(Macro, raw_macro) async for raw_macro in raw_macros]
+                await self.cache.put_cache(key=user_id, field_key="calc", data_key="macros", data=macros)
+                return EnaResponse(data=macros)
+
+            else:
+                return EnaResponse(message=f"user {user_id} has no packages!", data=None)
 
     async def fetch_packages(self, user_id: str) -> EnaResponse:
+
         db = self.conn.ena_expr_eval_database
         collec = db.packages
 
-        raw_packages = await collec.find({"owner_id": user_id})
+        if await self.cache.is_cached(key=user_id, field_key="calc", data_key="packages"):
+            cached_packages: List[MacroPackage] = await self.cache.get_cache(
+                key=user_id, field_key="calc", data_key="packages"
+            )
 
-        if raw_packages:
-            packages: List[MacroPackage] = [from_dict(MacroPackage, raw_package) for raw_package in raw_packages]
-            return EnaResponse(data=packages)
+            return EnaResponse(message=f"fetched macros: {cached_packages}", data=cached_packages)
 
         else:
-            return EnaResponse(message=f"user {user_id} has no packages!", data=None)
+            raw_packages = collec.find({"owner_id": user_id})
+            if raw_packages:
+                packages: List[MacroPackage] = [
+                    from_dict(MacroPackage, raw_package) async for raw_package in raw_packages
+                ]
+                await self.cache.put_cache(key=user_id, field_key="calc", data_key="packages", data=packages)
+                return EnaResponse(data=packages)
+
+            else:
+                return EnaResponse(message=f"user {user_id} has no packages!", data=None)
 
     @staticmethod
     def generate_uid(ref: str) -> str:
