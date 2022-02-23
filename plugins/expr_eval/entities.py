@@ -19,8 +19,8 @@ logging = logging.getLogger(__name__)  # type: ignore
 
 @dataclass
 class EnaResponse:
+    data: Any  # reference of data
     message: Optional[str] = None
-    data: Optional[Any] = None  # reference of data
     error: Optional[Any] = None
 
 
@@ -209,13 +209,13 @@ class MacroLock:
         return self
 
     def is_valid_caller(self) -> MacroLock:
-        valid_pattern = r"^[_a-zA-Z*][_a-zA-Z0-9]+"
+        valid_pattern = r"^[_a-zA-Z*][_a-zA-Z0-9=]+"
         result = re.match(valid_pattern, self.caller)
 
         logging.debug(f" caller '{self.caller}' regex validation result: {result}")
         if result:
             match_res = result.group()
-            self.is_less_30_chars(match_res)
+            self.is_valid_length(match_res)
             self.is_equal(match_res, self.caller)
             self.is_not_keyword(match_res)
             logging.debug(f"PASSED: {self.caller}")
@@ -227,7 +227,8 @@ class MacroLock:
             return self
 
     def is_valid_variables(self) -> MacroLock:
-        valid_pattern = r"^[_a-zA-Z][_a-zA-Z0-9]+"
+        # valid_pattern = r"^[_a-zA-Z][_a-zA-Z0-9=]+"
+        valid_pattern = r"^[_a-zA-Z0-9*]+(\s*=?\s*[0-9.]+)?"
         if self.variables:
             for v in self.variables:
                 var = v.strip()
@@ -237,7 +238,7 @@ class MacroLock:
                 if result:
 
                     match_res = result.group()
-                    self.is_less_30_chars(match_res)
+                    self.is_valid_length(match_res)
                     self.is_equal(match_res, var)
                     self.is_not_keyword(match_res)
                     logging.debug(f"PASSED: {var}")
@@ -280,15 +281,11 @@ class MacroLock:
         # except se.NameNotDefined as e:
         #     raise NameNotDefinedError(ref=e)
 
-
         env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
 
         logging.debug(f" testing: {self.formula}")
         se.simple_eval(test_str, functions=env_data)
         logging.debug(f"PASSED: {self.formula}")
-
-
-        
 
     # tests
     def is_char(self, raw_result: str) -> Optional[bool]:
@@ -297,7 +294,7 @@ class MacroLock:
 
         raise InvalidNameError(ref=raw_result)
 
-    def is_less_30_chars(self, match_result: str) -> Optional[bool]:
+    def is_valid_length(self, match_result: str) -> Optional[bool]:
         if len(match_result) <= 30:
             return True
 
@@ -307,7 +304,7 @@ class MacroLock:
         if match_result == raw_result:
             return True
 
-        raise InvalidNameError(ref=match_result)
+        raise InvalidNameError(ref=raw_result)
 
     def is_not_keyword(self, match_result: str) -> Optional[bool]:
         if match_result not in keyword.kwlist:

@@ -30,7 +30,7 @@ class CreateMacroForm(miru.Modal):
                 label="Name",
                 placeholder="e.g. A cool macro that I use",
                 min_length=2,
-                max_length=30,
+                max_length=100,
                 required=True,
                 value=values["name"] if values else None,
             )
@@ -60,7 +60,6 @@ class CreateMacroForm(miru.Modal):
                 custom_id="variables",
                 label="Variables (Optional)",
                 placeholder="e.g. var1 | Use commas if using multiple variables.",
-                max_length=30,
                 value=values["variables"] if values else None,
             )
         )
@@ -70,13 +69,13 @@ class CreateMacroForm(miru.Modal):
                 label="Formula",
                 placeholder="e.g. {var1} + {var2} | Enclose variables inside the braces.",
                 required=True,
+                style=hikari.TextInputStyle.PARAGRAPH,
                 value=values["formula"] if values else None,
             )
         )
 
     async def callback(self, context: miru.ModalContext) -> None:
         logging.debug("WORKING SUBMIT MODAL")
-        # await context.defer()
 
         values = dict()
         if context.values:

@@ -69,8 +69,8 @@ async def _create(context: lightbulb.Context):
 async def _create_macro(context: lightbulb.Context):
 
     modal = CreateMacroForm()
-    assert context.interaction is not None
-    await modal.send(interaction=context.interaction)
+    if context.interaction:
+        await modal.send(interaction=context.interaction)
 
 
 # @_create.child
@@ -101,4 +101,26 @@ async def _my(context: lightbulb.Context):
 )
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_macros(context: lightbulb.Context):
+    pass
+
+
+@_my.child
+@lightbulb.command(
+    name="environment",
+    description="get your evaluation environment!",
+    guilds=TEST_GUILDS,
+)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _my_environment(context: lightbulb.Context):
+    pass
+
+
+@_my.child
+@lightbulb.command(
+    name="packages",
+    description="get your packages!",
+    guilds=TEST_GUILDS,
+)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _my_packages(context: lightbulb.Context):
     pass

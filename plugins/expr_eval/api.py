@@ -1,6 +1,3 @@
-"""THIS MODULE SHOULD ONLY RETURN STATUSES"""
-
-
 from __future__ import annotations
 
 import os
@@ -18,6 +15,7 @@ from plugins.expr_eval.entities import (
     DuplicateMacroError,
     InvalidNameError,
     EnaResponse,
+    MacroPackage,
     NameNotDefinedError,
 )
 
@@ -28,7 +26,7 @@ from motor import motor_asyncio
 
 from dataclasses import asdict
 from dacite import from_dict
-from typing import Dict
+from typing import Dict, List
 
 logging = logging.getLogger(__name__)  # type: ignore
 
@@ -42,13 +40,17 @@ class EnaExpr:
 
     async def calculate(self, expression: str, user_id: str) -> EnaResponse:
 
-        calc_env: CalculatorEnv = await self.fetch_environment(user_id)
+        ena_resp: EnaResponse = await self.fetch_environment(user_id)
+
+        calc_env: CalculatorEnv = ena_resp.data
         env_lock: CalculatorEnvLock = calc_env.build()
         env_data = env_lock.resolve_macro_data(env_data=env_lock.resolve_macro_data())
 
         result = se.simple_eval(expr=expression, functions=env_data)
 
         return EnaResponse(message="Solved!", data=result)
+
+        # MAKE EXCEPTIONS HANDLERS HERE
 
     """MAIN API ENDPOINTS"""
 
@@ -64,7 +66,8 @@ class EnaExpr:
 
         try:
             # validation
-            calc_env: CalculatorEnv = await self.fetch_environment(owner_id)
+            ena_resp: EnaResponse = await self.fetch_environment(owner_id)
+            calc_env: CalculatorEnv = ena_resp.data
             macro.build().validate().test_macro(env=calc_env)
 
             # add to cache/db
@@ -82,24 +85,24 @@ class EnaExpr:
 
         except mongo_errors.DuplicateKeyError:
             e = DuplicateMacroError(macro=macro)
-            return EnaResponse(error=e)
+            return EnaResponse(error=e, data=macro)
 
         except LengthError as e:
-            return EnaResponse(error=e)
+            return EnaResponse(error=e, data=macro)
 
         except InvalidNameError as e:
-            return EnaResponse(error=e)
+            return EnaResponse(error=e, data=macro)
 
         except KeywordNameError as e:
-            return EnaResponse(error=e)
+            return EnaResponse(error=e, data=macro)
 
         except NameNotDefinedError as e:
-            return EnaResponse(error=e)
+            return EnaResponse(error=e, data=macro)
 
-        except Exception as e:
+        except Exception:
             # for unhandled exceptions
             tb = traceback.format_exc(limit=2)
-            return EnaResponse(message=f"```{tb}```")  # type: ignore
+            return EnaResponse(message=f"```{tb}```", data=tb)  # type: ignore
 
     async def read_macro(self, macro_id: str) -> Dict:
         db = self.conn.ena_expr_eval_database
@@ -108,11 +111,11 @@ class EnaExpr:
         res = await collec.find_one({"_id": macro_id})
         return res
 
-    async def update_macro(self, macro_id: str, query: Dict) -> None:
+    async def update_macro(self, macro_id: str, **kwargs: str) -> None:
         db = self.conn.ena_expr_eval_database
         collec = db.macros
         # validate here later
-        await collec.update_one({"_id": macro_id}, query)
+        await collec.update_one({"_id": macro_id}, kwargs)
 
     async def delete_macro(self, macro_id: str) -> None:
         db = self.conn.ena_expr_eval_database
@@ -120,16 +123,17 @@ class EnaExpr:
 
         await collec.delete_one({"_id": macro_id})
 
-    """FOR ENVIRONMENTS [INTERNAL OPERATION ONLY]"""
+    """FOR SPECIFIC ENDPOINTS"""
 
-    async def fetch_environment(self, user_id: str) -> CalculatorEnv:
+    async def fetch_environment(self, user_id: str) -> EnaResponse:
         db = self.conn.ena_expr_eval_database
         collec = db.environments
 
         if await self.cache.is_cached(key=user_id, field_key="calc", data_key="env"):
             logging.debug(" Env found on cache, loading from cache instead...")
-            cached_calc_env = await self.cache.get_cache(key=user_id, field_key="calc", data_key="env")
-            return cached_calc_env
+            cached_calc_env: CalculatorEnv = await self.cache.get_cache(key=user_id, field_key="calc", data_key="env")
+
+            return EnaResponse(message=f"fetched env: {cached_calc_env._id}", data=cached_calc_env)
 
         else:
             logging.debug(f" Env not on cache, fetching environment of '{user_id}' from db...")
@@ -143,7 +147,7 @@ class EnaExpr:
                 await collec.insert_one(asdict(calc_env))
                 await self.cache.put_cache(key=user_id, field_key="calc", data_key="env", data=calc_env)
 
-            return calc_env
+            return EnaResponse(message=f"fetched env: {calc_env._id}", data=calc_env)
 
     async def update_environment(self, user_id: str, query: Dict) -> None:
         db = self.conn.ena_expr_eval_database
@@ -152,6 +156,32 @@ class EnaExpr:
         await collec.update_one({"_id": user_id}, query)
 
         logging.debug(f" Updated env of '{user_id}' with query: {query}")
+
+    async def fetch_macros(self, user_id: str) -> EnaResponse:
+        db = self.conn.ena_expr_eval_database
+        collec = db.macros
+
+        raw_macros = await collec.find({"owner_id": user_id})
+
+        if raw_macros:
+            macros: List[Macro] = [from_dict(Macro, raw_macro) for raw_macro in raw_macros]
+            return EnaResponse(data=macros)
+
+        else:
+            return EnaResponse(message=f"user {user_id} has no packages!", data=None)
+
+    async def fetch_packages(self, user_id: str) -> EnaResponse:
+        db = self.conn.ena_expr_eval_database
+        collec = db.packages
+
+        raw_packages = await collec.find({"owner_id": user_id})
+
+        if raw_packages:
+            packages: List[MacroPackage] = [from_dict(MacroPackage, raw_package) for raw_package in raw_packages]
+            return EnaResponse(data=packages)
+
+        else:
+            return EnaResponse(message=f"user {user_id} has no packages!", data=None)
 
     @staticmethod
     def generate_uid(ref: str) -> str:
