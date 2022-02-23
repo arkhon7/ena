@@ -1,8 +1,9 @@
+import re
 import hikari
 import miru
 import logging
 
-from typing import Dict, List, Union, Optional
+from typing import AnyStr, Dict, List, Union, Optional
 from plugins.expr_eval import api
 
 
@@ -47,6 +48,18 @@ class UserMacroView(miru.View):
 
 
 class UserMacroSelect(miru.Select):
-    def __init__(self) -> None:
+    def __init__(self, macros: List[api.Macro]) -> None:
         super().__init__()
         self.options = []
+
+
+# utils
+def _get_curr_page(embed: hikari.Embed) -> Union[int, None]:
+    if embed.footer:
+        if embed.footer.text:
+            result = re.findall(r"([0-9]+)/[0-9]+", embed.footer.text)
+            if len(result) == 1:
+                res = result[0]
+                return res
+
+    return None
