@@ -4,6 +4,7 @@ import logging
 
 from plugins.expr_eval.api import EnaExpr
 from plugins.expr_eval.create import CreateMacroForm
+from plugins.expr_eval.user_data import UserMacroView, UserMacrosEmbed
 
 expr_eval_plugin = lightbulb.Plugin("Expression Evaluator plugin")
 logging = logging.getLogger(__name__)  # type: ignore
@@ -102,8 +103,15 @@ async def _my(context: lightbulb.Context):
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_macros(context: lightbulb.Context):
     user_id: str = str(context.user.id)
-    user_macros = await expr_eval.fetch_macros(user_id=user_id)
-    print(user_macros)
+    ena_resp = await expr_eval.fetch_macros(user_id=user_id)
+
+    if ena_resp.data:
+        user_macro_embed = UserMacrosEmbed(macros=ena_resp.data)
+        user_macro_view = UserMacroView(expr_handler=expr_eval)
+        await context.respond(embed=user_macro_embed, components=user_macro_view.build())
+
+    else:
+        await context.respond(content="You have no macros saved!")
 
 
 @_my.child
