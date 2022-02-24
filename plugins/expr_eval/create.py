@@ -159,3 +159,112 @@ class MacroConfirmationView(miru.View):
 #                 "https://cdn.discordapp.com/attachments/886112309020348466/904663908072161280/Magnify-1s-207px.gif"
 #             )
 #         )
+class CreatePackageForm(miru.Modal):
+    """A modal/form for getting package data inputs."""
+
+    def __init__(self, values: Optional[Dict[str, str]] = None) -> None:
+        super().__init__(title="Create a Package", custom_id="create-macro-form")
+
+        self.add_item(
+            miru.TextInput(
+                custom_id="name",
+                label="Name",
+                placeholder="e.g. A cool package that I use",
+                min_length=2,
+                max_length=100,
+                required=True,
+                value=values["name"] if values else None,
+            )
+        )
+        self.add_item(
+            miru.TextInput(
+                custom_id="description",
+                label="Description (Optional)",
+                placeholder="e.g. This is a reaally cool package",
+                max_length=2000,
+                style=hikari.TextInputStyle.PARAGRAPH,
+                value=values["description"] if values else None,
+            )
+        )
+
+        self.add_item(
+            miru.TextInput(
+                custom_id="prefix",
+                label="Prefix",
+                placeholder="e.g. coolpackage",
+                value=values["prefix"] if values else None,
+                max_length=30,
+            )
+        )
+
+    async def callback(self, context: miru.ModalContext) -> None:
+        logging.debug("WORKING SUBMIT MODAL")
+
+        values = dict()
+        if context.values:
+            for k, v in context.values.items():
+                if k.custom_id:
+                    values[k.custom_id] = v
+
+        confirmation_embed = PackageConfirmationEmbed(values)
+        confirmation_view = PackageConfirmationView()
+
+        await context.respond(embed=confirmation_embed, components=confirmation_view.build())
+        message = await context.fetch_response()
+        confirmation_view.start(message)
+
+
+class PackageConfirmationEmbed(hikari.Embed):
+    def __init__(self, values: Dict[str, str]) -> None:
+        super().__init__()
+        self.title = "Package Confirmation"
+        self.description = "Please check carefully the details below."
+
+        for custom_id, value in values.items():
+            self.add_field(name=custom_id.capitalize(), value=f"```\n{value}\n```")
+
+
+class PackageConfirmationView(miru.View):
+    def __init__(self) -> None:
+        super().__init__()
+
+    @miru.button(label="Submit", custom_id="submit-package-form-btn")
+    async def _submit_macro(self, button: miru.Button, context: miru.Context):
+        await context.defer()
+        interaction: miru.ComponentInteraction = context.interaction
+        message: hikari.Message = interaction.message
+        embed: hikari.Embed = message.embeds[0]
+        user_id: str = str(context.user.id)
+        fields = embed.fields
+
+        name: hikari.EmbedField = fields[0]
+        desc: hikari.EmbedField = fields[1]
+        prfx: hikari.EmbedField = fields[2]
+        package_data = {
+            "name": name.value[3:-3].strip(),
+            "owner_id": user_id,
+            "description": desc.value[3:-3].strip(),
+            "prefix": prfx.value[3:-3].strip(),
+        }
+
+        ## CREATE PACKAGE FUNC HERE
+        resp = await expr_eval.create_package(package_data=package_data)
+
+        if resp.error:
+            await context.respond(content=resp.error.message)
+
+        else:
+            await context.respond(content=resp.message)
+
+    @miru.button(label="Edit", custom_id="edit-package-form-btn")
+    async def _edit_package(self, button: miru.Button, context: miru.ViewContext):
+        interaction: miru.ComponentInteraction = context.interaction
+        message: hikari.Message = interaction.message
+        embed: hikari.Embed = message.embeds[0]
+
+        package_data = {field.name.lower(): field.value[3:-3].strip() for field in embed.fields}
+        # embed_to_edit: hikari.Embed = interaction.message.embeds[0]
+
+        logging.debug(package_data)
+        modal = CreatePackageForm(values=package_data)
+        await context.respond_with_modal(modal)

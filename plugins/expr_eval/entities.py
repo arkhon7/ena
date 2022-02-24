@@ -92,6 +92,7 @@ class MacroPackage:
     dependencies: Optional[List[MacroPackage]] = None
     macros: Optional[List[Macro]] = None
     public: bool = False
+    active: bool = False  # should only be activated inside env not on packages collection
 
     def build(self) -> MacroPackageLock:
         """called to parse the package into a lockfile, which can be used in
@@ -133,6 +134,16 @@ class MacroPackage:
 
                         yield macro
 
+    # def resolve_to(self, env: CalculatorEnv) -> MacroPackage:
+    #     # function here for adding dependencies into the package.
+
+    #     for macro in env.macros:
+    #         ...
+
+    #     for package in env.packages:
+    #         ...
+    #     ...
+
 
 @dataclass
 class MacroPackageLock:
@@ -144,6 +155,16 @@ class MacroPackageLock:
     description: str
     prefix: str
     locked_funcs: Dict[str, str]
+
+    def validate(self) -> MacroPackageLock:
+        valid_pattern = r"^[_a-zA-Z][_a-zA-Z0-9=]+"
+        result = re.match(valid_pattern, self.prefix)
+
+        if result:
+            if result.group() == self.prefix:
+                return self
+
+        raise InvalidNameError(ref=self.prefix)
 
 
 @dataclass
@@ -228,7 +249,7 @@ class MacroLock:
 
     def is_valid_variables(self) -> MacroLock:
         # valid_pattern = r"^[_a-zA-Z][_a-zA-Z0-9=]+"
-        valid_pattern = r"^[_a-zA-Z0-9*]+(\s*=?\s*[0-9.]+)?"
+        valid_pattern = r"^[_a-zA-Z0-9*]+(\s*=?\s*[0-9.True|False|]+)?"
         if self.variables:
             for v in self.variables:
                 var = v.strip()
@@ -271,21 +292,22 @@ class MacroLock:
         else:
             test_str = f"{self.caller}()"
 
-        # try:
-        #     env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
+        try:
+            if env_data.get(self.caller, False):
+                env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
 
-        #     logging.debug(f" testing: {self.formula}")
-        #     se.simple_eval(test_str, functions=env_data)
-        #     logging.debug(f"PASSED: {self.formula}")
+                logging.debug(f" testing: {self.formula}")
+                se.simple_eval(test_str, functions=env_data)
+                logging.debug(f"PASSED: {self.formula}")
 
-        # except se.NameNotDefined as e:
-        #     raise NameNotDefinedError(ref=e)
+            else:
+                raise CallerAlreadyUsedError(ref=self.caller)
 
-        env_data[self.caller] = eval(self.func_str, {"env_data": env_data, "se": se})
+        except se.NameNotDefined as e:
+            raise NameNotDefinedError(ref=e)
 
-        logging.debug(f" testing: {self.formula}")
-        se.simple_eval(test_str, functions=env_data)
-        logging.debug(f"PASSED: {self.formula}")
+        except Exception as e:
+            raise Exception(e)
 
     # tests
     def is_char(self, raw_result: str) -> Optional[bool]:
@@ -323,13 +345,23 @@ class EnaError(Exception):
         self.message = message
 
 
-# uploading macro errors
+# uploading errors
 class DuplicateMacroError(EnaError):
     def __init__(self, macro: Macro) -> None:
         super().__init__()
         self.ref = macro
         self.message = (
             f"Your macro __{self.ref.name}__ is using an already existing caller "
+            f"__{self.ref.caller}__ which conflicts with your other macros. Please change it."
+        )
+
+
+class DuplicatePackageError(EnaError):
+    def __init__(self, package: Macro) -> None:
+        super().__init__()
+        self.ref = package
+        self.message = (
+            f"Your package __{self.ref.name}__ is using an already existing caller "
             f"__{self.ref.caller}__ which conflicts with your other macros. Please change it."
         )
 
@@ -356,7 +388,7 @@ class KeywordNameError(EnaError):
         self.message = f"__{self.ref}__ is already used! Please use another name for this."
 
 
-# evaluation errors
+# testing errors
 class NameNotDefinedError(EnaError):
     def __init__(self, ref: se.NameNotDefined) -> None:
         super().__init__()
@@ -365,3 +397,10 @@ class NameNotDefinedError(EnaError):
             f"Your formula __{self.ref.expression}__ is using __{self.ref.name}__ which is not "
             f"a macro, is this a variable? If so, please write it like this ```{{{self.ref.name}}}```"
         )
+
+
+class CallerAlreadyUsedError(EnaError):
+    def __init__(self, ref: str) -> None:
+        super().__init__()
+        self.ref = ref
+        self.message = f"__{self.ref}__ is already used! Please use another name for this."

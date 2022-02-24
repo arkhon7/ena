@@ -13,6 +13,7 @@ from plugins.expr_eval.entities import (
     KeywordNameError,
     LengthError,
     DuplicateMacroError,
+    DuplicatePackageError,
     InvalidNameError,
     EnaResponse,
     MacroPackage,
@@ -53,6 +54,38 @@ class EnaExpr:
         # MAKE EXCEPTIONS HANDLERS HERE
 
     """MAIN API ENDPOINTS"""
+
+    async def create_package(self, package_data: Dict) -> EnaResponse:
+        db = self.conn.ena_expr_eval_database
+        collec = db.packages
+
+        prefix = package_data["prefix"]
+        owner_id = package_data["owner_id"]
+
+        package_data["_id"] = self.generate_uid(f"{prefix}")
+        package: MacroPackage = from_dict(MacroPackage, package_data)
+
+        try:
+            ena_resp: EnaResponse = await self.fetch_environment(owner_id)
+            calc_env: CalculatorEnv = ena_resp.data
+            package.build().validate()
+            if calc_env.packages:
+                calc_env.packages.append(package)
+            else:
+                calc_env.packages = [package]
+
+            await collec.insert_one(asdict(package))
+            await self.cache.put_cache(key=owner_id, field_key="calc", data_key="env", data=calc_env)
+            await self.update_environment(owner_id, {"$addToSet": {"packages": asdict(package)}})
+
+            return EnaResponse(message=f"Successfully created **{package.name}**", data=package)
+
+        except mongo_errors.DuplicateKeyError:
+            e = DuplicatePackageError(package=package)
+            return EnaResponse(error=e, data=package)
+
+        except InvalidNameError as e:
+            return EnaResponse(error=e, data=package)
 
     async def create_macro(self, macro_data: Dict) -> EnaResponse:
         db = self.conn.ena_expr_eval_database
@@ -103,13 +136,6 @@ class EnaExpr:
             # for unhandled exceptions
             tb = traceback.format_exc(limit=2)
             return EnaResponse(message=f"```{tb}```", data=tb)  # type: ignore
-
-    async def read_macro(self, macro_id: str) -> Dict:
-        db = self.conn.ena_expr_eval_database
-        collec = db.macros
-
-        res = await collec.find_one({"_id": macro_id})
-        return res
 
     async def update_macro(self, macro_id: str, **kwargs: str) -> None:
         db = self.conn.ena_expr_eval_database
@@ -200,6 +226,12 @@ class EnaExpr:
 
             else:
                 return EnaResponse(message=f"user {user_id} has no packages!", data=None)
+
+    # async def add_macro_to_package(self, package_prefix: str):
+    #     ...
+
+    # async def add_package_to_env(self, user_id: str):
+    #     ...
 
     @staticmethod
     def generate_uid(ref: str) -> str:

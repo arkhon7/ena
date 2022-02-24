@@ -3,8 +3,8 @@ import hikari
 import logging
 
 from plugins.expr_eval.api import EnaExpr
-from plugins.expr_eval.create import CreateMacroForm
-from plugins.expr_eval.user_data import UserMacroView, UserMacrosEmbed
+from plugins.expr_eval.create import CreateMacroForm, CreatePackageForm
+from plugins.expr_eval.user_data import UserDataPaginator
 
 expr_eval_plugin = lightbulb.Plugin("Expression Evaluator plugin")
 logging = logging.getLogger(__name__)  # type: ignore
@@ -74,15 +74,17 @@ async def _create_macro(context: lightbulb.Context):
         await modal.send(interaction=context.interaction)
 
 
-# @_create.child
-# @lightbulb.command(
-#     name="package",
-#     description="create a package!",
-#     guilds=TEST_GUILDS,
-# )
-# @lightbulb.implements(lightbulb.SlashSubCommand)
-# async def _create_package(context: lightbulb.Context):
-#     pass
+@_create.child
+@lightbulb.command(
+    name="package",
+    description="create a package!",
+    guilds=TEST_GUILDS,
+)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _create_package(context: lightbulb.Context):
+    modal = CreatePackageForm()
+    if context.interaction:
+        await modal.send(interaction=context.interaction)
 
 
 # USER DATA COMMANDS
@@ -104,14 +106,16 @@ async def _my(context: lightbulb.Context):
 async def _my_macros(context: lightbulb.Context):
     user_id: str = str(context.user.id)
     ena_resp = await expr_eval.fetch_macros(user_id=user_id)
+    if context.interaction:
+        if ena_resp.data:
+            user_macro_pages = UserDataPaginator(
+                prefix="Here are your macros. Use `/info <caller>` to get the info of a macro.\n\n"
+            ).paginate_macros(ena_resp.data)
+            navigator = lightbulb.utils.ButtonNavigator(pages=user_macro_pages.build_pages())
+            await navigator.run(context=context)
 
-    if ena_resp.data:
-        user_macro_embed = UserMacrosEmbed(macros=ena_resp.data)
-        user_macro_view = UserMacroView(expr_handler=expr_eval)
-        await context.respond(embed=user_macro_embed, components=user_macro_view.build())
-
-    else:
-        await context.respond(content="You have no macros saved!")
+        else:
+            await context.respond(content="You have no macros saved!")
 
 
 @_my.child
@@ -136,5 +140,14 @@ async def _my_environment(context: lightbulb.Context):
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _my_packages(context: lightbulb.Context):
     user_id: str = str(context.user.id)
-    user_packages = await expr_eval.fetch_packages(user_id=user_id)
-    print(user_packages)
+    ena_resp = await expr_eval.fetch_packages(user_id=user_id)
+    if context.interaction:
+        if ena_resp.data:
+            user_package_pages = UserDataPaginator(
+                prefix="Here are your packages. Use `/info <prefix>` to get the info of a package.\n\n"
+            ).paginate_packages(ena_resp.data)
+            navigator = lightbulb.utils.ButtonNavigator(pages=user_package_pages.build_pages())
+            await navigator.run(context=context)
+
+        else:
+            await context.respond(content="You have no packages saved!")
