@@ -13,9 +13,7 @@ async def _create_reaction_message(ctx: lightbulb.Context):
     ROLES_CHANNEL_ID = 958156380559257660
 
     banner_embed = hikari.Embed(color="#36393f")
-    banner_embed.set_image(
-        hikari.URL("https://c.tenor.com/ACxZLKSQf8IAAAAC/ena-shinonome-ena.gif")
-    )
+    banner_embed.set_image(hikari.URL("https://c.tenor.com/ACxZLKSQf8IAAAAC/ena-shinonome-ena.gif"))
 
     intro_embed = hikari.Embed(
         title=("**```            Role Selection           ```**"),
@@ -27,16 +25,8 @@ async def _create_reaction_message(ctx: lightbulb.Context):
         color="#36393f",
     )
     intro_embed.set_image(
-        hikari.URL(
-            "https://cdn.discordapp.com/attachments/857365300966326292/879858842224185404/white2.png"
-        )
+        hikari.URL("https://cdn.discordapp.com/attachments/857365300966326292/879858842224185404/white2.png")
     )
-    # intro_embed.set_author(
-    #     name="Enanan",
-    #     icon=hikari.URL(
-    #         "https://c.tenor.com/3_r_hd-XEPsAAAAC/shinonome-ena-project-sekai.gif"
-    #     ),
-    # )
 
     reaction_embed = hikari.Embed(
         title=("**```          Choose A Category         ```**"),
@@ -50,34 +40,18 @@ async def _create_reaction_message(ctx: lightbulb.Context):
         color="#36393f",
     )
     reaction_embed.set_image(
-        hikari.URL(
-            "https://cdn.discordapp.com/attachments/857365300966326292/879858842224185404/white2.png"
-        )
+        hikari.URL("https://cdn.discordapp.com/attachments/857365300966326292/879858842224185404/white2.png")
     )
 
     await ctx.bot.rest.create_message(channel=ROLES_CHANNEL_ID, embed=banner_embed)
     await ctx.bot.rest.create_message(channel=ROLES_CHANNEL_ID, embed=intro_embed)
-    reaction_message = await ctx.bot.rest.create_message(
-        channel=ROLES_CHANNEL_ID, embed=reaction_embed
-    )
+    reaction_message = await ctx.bot.rest.create_message(channel=ROLES_CHANNEL_ID, embed=reaction_embed)
 
-    ctx.bot.d["reaction_message_id"] = reaction_message.id
-
-    await reaction_message.add_reaction(
-        emoji="pink_verified_icon", emoji_id=995312808780644423
-    )
-    await reaction_message.add_reaction(
-        emoji="purple_verified_icon", emoji_id=995312789419728916
-    )
-    await reaction_message.add_reaction(
-        emoji="blue_verified_icon", emoji_id=995312743185911808
-    )
-    await reaction_message.add_reaction(
-        emoji="orange_verified_icon", emoji_id=995337599067627570
-    )
-    await reaction_message.add_reaction(
-        emoji="green_verified_icon", emoji_id=995312690522226708
-    )
+    await reaction_message.add_reaction(emoji="pink_verified_icon", emoji_id=995312808780644423)
+    await reaction_message.add_reaction(emoji="purple_verified_icon", emoji_id=995312789419728916)
+    await reaction_message.add_reaction(emoji="blue_verified_icon", emoji_id=995312743185911808)
+    await reaction_message.add_reaction(emoji="orange_verified_icon", emoji_id=995337599067627570)
+    await reaction_message.add_reaction(emoji="green_verified_icon", emoji_id=995312690522226708)
 
     await ctx.respond("done creating the reaction message!")
 

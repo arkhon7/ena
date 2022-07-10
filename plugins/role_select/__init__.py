@@ -1,15 +1,14 @@
-import lightbulb
-
 from .plugin import role_select
 from .role import create_reaction_role_handler
-
-
-GUILD_ID = 957116703374979093
+import lightbulb
 
 
 def build_custom_reaction_role_handler(
     bot: lightbulb.BotApp,
 ):  # to be cached inside the bot instance for handling reaction events in plugin listeners
+
+    GUILD_ID = 957116703374979093
+    MESSAGE_ID = 995595037993861190
     roles = [
         {"emoji_name": "pink_verified_icon", "role_id": 995335085698076732},  # anime
         {"emoji_name": "purple_verified_icon", "role_id": 995564101902278736},  # gamer
@@ -18,9 +17,9 @@ def build_custom_reaction_role_handler(
         {"emoji_name": "green_verified_icon", "role_id": 995338406139793408},  # study
     ]
 
-    reaction_role_handler = create_reaction_role_handler(
-        bot, guild_id=GUILD_ID, roles=roles, message_id=bot.d["reaction_message_id"]
-    )
+    # improvement, use a database to persist the message id
+
+    reaction_role_handler = create_reaction_role_handler(bot, guild_id=GUILD_ID, roles=roles, message_id=MESSAGE_ID)
     return reaction_role_handler
 
 
