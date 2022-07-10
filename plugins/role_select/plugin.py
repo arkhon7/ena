@@ -61,6 +61,8 @@ async def _create_reaction_message(ctx: lightbulb.Context):
         channel=ROLES_CHANNEL_ID, embed=reaction_embed
     )
 
+    ctx.bot.d["reaction_message_id"] = reaction_message.id
+
     await reaction_message.add_reaction(
         emoji="pink_verified_icon", emoji_id=995312808780644423
     )

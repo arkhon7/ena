@@ -5,7 +5,6 @@ from .role import create_reaction_role_handler
 
 
 GUILD_ID = 957116703374979093
-REACTION_MESSAGE_ID = 995575964706820106
 
 
 def build_custom_reaction_role_handler(
@@ -20,7 +19,7 @@ def build_custom_reaction_role_handler(
     ]
 
     reaction_role_handler = create_reaction_role_handler(
-        bot, guild_id=GUILD_ID, roles=roles, message_id=REACTION_MESSAGE_ID
+        bot, guild_id=GUILD_ID, roles=roles, message_id=bot.d["reaction_message_id"]
     )
     return reaction_role_handler
 
