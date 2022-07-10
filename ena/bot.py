@@ -18,7 +18,7 @@ class Ena(lightbulb.BotApp):
         super().__init__(token=os.getenv("TOKEN"))
         miru.load(self)
         self.load_plugins(PLUGINS)
-        self.help_command = EnaHalp(self)
+        # self.help_command = EnaHalp(self)
 
         # init
         self.subscribe(hikari.StartedEvent, self.on_start)
@@ -47,38 +47,34 @@ class Ena(lightbulb.BotApp):
         )
 
 
-class EnaHalp(lightbulb.BaseHelpCommand):
-    async def send_command_help(
-        self, context: lightbulb.Context, command: lightbulb.Command
-    ) -> None:
-        if context.options.command == "calc":
-            paginated_help = lightbulb.utils.EmbedPaginator(max_chars=1000)
+# class EnaHalp(lightbulb.BaseHelpCommand):
+#     async def send_command_help(self, context: lightbulb.Context, command: lightbulb.Command) -> None:
+#         if context.options.command == "calc":
+#             paginated_help = lightbulb.utils.EmbedPaginator(max_chars=1000)
 
-            with open("tests/li.txt", "r") as sample:
-                for line in sample.readlines():
-                    paginated_help.add_line(line)
-                navigator = lightbulb.utils.ButtonNavigator(
-                    pages=paginated_help.build_pages()
-                )
-                await navigator.run(context=context)
-            # await context.respond(content="help from calc")
+#             with open("tests/li.txt", "r") as sample:
+#                 for line in sample.readlines():
+#                     paginated_help.add_line(line)
+#                 navigator = lightbulb.utils.ButtonNavigator(pages=paginated_help.build_pages())
+#                 await navigator.run(context=context)
+#             # await context.respond(content="help from calc")
 
-    async def send_bot_help(self, context):
-        # Override this method to change the message sent when the help command
-        # is run without any arguments.
-        ...
+#     async def send_bot_help(self, context):
+#         # Override this method to change the message sent when the help command
+#         # is run without any arguments.
+#         ...
 
-    async def send_plugin_help(self, context, plugin):
-        # Override this method to change the message sent when the help command
-        # argument is the name of a plugin.
-        ...
+#     async def send_plugin_help(self, context, plugin):
+#         # Override this method to change the message sent when the help command
+#         # argument is the name of a plugin.
+#         ...
 
-    async def send_group_help(self, context, group):
-        # Override this method to change the message sent when the help command
-        # argument is the name or alias of a command group.
-        ...
+#     async def send_group_help(self, context, group):
+#         # Override this method to change the message sent when the help command
+#         # argument is the name or alias of a command group.
+#         ...
 
-    async def object_not_found(self, context, obj):
-        # Override this method to change the message sent when help is
-        # requested for an object that does not exist
-        ...
+#     async def object_not_found(self, context, obj):
+#         # Override this method to change the message sent when help is
+#         # requested for an object that does not exist
+#         ...
