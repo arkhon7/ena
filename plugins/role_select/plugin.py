@@ -1,10 +1,29 @@
+import typing
 import lightbulb
 import hikari
 
-role_select = lightbulb.Plugin("role-selection")
+from lightbulb.utils.pag import EmbedPaginator
+from lightbulb.utils.nav import ButtonNavigator
+
+from ena.cache import get_guild_cache, set_guild_cache, Cache
+from plugins.role_select.views import create_roles_view
+from .helpers import generate_message_link, generate_reaction_role_aware_id, generate_reaction_role_id
+from .controller import (
+    ReactionRoleAwareData,
+    ReactionRoleData,
+    add_reaction_role,
+    add_reaction_role_aware,
+    delete_reaction_role,
+    fetch_all_reaction_role,
+    fetch_all_reaction_role_aware,
+    delete_reaction_role_aware,
+)
 
 
-@role_select.command
+plugin = lightbulb.Plugin("role-selection-plugin")
+
+
+@plugin.command
 @lightbulb.add_checks(lightbulb.has_guild_permissions(hikari.Permissions.ADMINISTRATOR))
 @lightbulb.command(name="create_reaction_msg", description="create reaction message")
 @lightbulb.implements(lightbulb.SlashCommand)
@@ -56,15 +75,264 @@ async def _create_reaction_message(ctx: lightbulb.Context):
     await ctx.respond("done creating the reaction message!")
 
 
-@role_select.listener(hikari.ReactionAddEvent)  # type: ignore
-async def handle_reaction_add(event: hikari.ReactionAddEvent):
+# @plugin.listener(hikari.ReactionAddEvent)  # type: ignore
+# async def handle_reaction_add(event: hikari.ReactionAddEvent):
 
-    reaction_role_handler = role_select.bot.d["reaction_role_handler"]
-    await reaction_role_handler.add_role_to_member(event.emoji_name, event.user_id)
+#     reaction_role_handler = plugin.bot.d["reaction_role_handler"]
+#     await reaction_role_handler.add_role_to_member(event.emoji_name, event.user_id)
 
 
-@role_select.listener(hikari.ReactionDeleteEvent)  # type: ignore
-async def handle_reaction_remove(event: hikari.ReactionDeleteEvent):
+# @plugin.listener(hikari.ReactionDeleteEvent)  # type: ignore
+# async def handle_reaction_remove(event: hikari.ReactionDeleteEvent):
 
-    reaction_role_handler = role_select.bot.d["reaction_role_handler"]
-    await reaction_role_handler.remove_role_from_member(event.emoji_name, event.user_id)
+#     reaction_role_handler = plugin.bot.d["reaction_role_handler"]
+#     await reaction_role_handler.remove_role_from_member(event.emoji_name, event.user_id)
+
+
+@plugin.command
+@lightbulb.add_checks(lightbulb.has_guild_permissions(hikari.Permissions.ADMINISTRATOR))
+@lightbulb.command(name="reactrole", description="manipulate reaction roles", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashCommandGroup)
+async def reaction_group(ctx: lightbulb.Context):
+    ...
+
+
+@reaction_group.child
+@lightbulb.option(name="message_id", description="target message's id", type=hikari.OptionType.STRING)
+@lightbulb.command(name="mount", description="mounts reaction role awareness to a message", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _mount_reaction_role_aware(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+
+    message_id = ctx.options.message_id
+    channel_id = str(ctx.channel_id)
+    guild_id = str(ctx.guild_id)
+
+    rra_id = generate_reaction_role_aware_id(guild_id, channel_id, message_id)
+
+    cached: typing.Optional[list[ReactionRoleAwareData]] = await get_guild_cache(
+        guild_id=guild_id, key=Cache.REACTION_ROLE_AWARE
+    )
+
+    if cached:
+        cached.append(ReactionRoleAwareData(id=rra_id, message_id=message_id, channel_id=channel_id, guild_id=guild_id))
+        await set_guild_cache(guild_id=guild_id, key=Cache.REACTION_ROLE_AWARE, value=cached)
+
+    # add reaction aware message data to db
+    await add_reaction_role_aware(
+        engine, rra_id=rra_id, guild_id=guild_id, channel_id=channel_id, message_id=message_id
+    )
+
+    await ctx.respond(
+        "enabled reaction role message into this ! "
+        f"You can now use `/rr add` with the `{rra_id}` to start adding reaction roles!",
+    )
+
+
+@reaction_group.child
+@lightbulb.option(name="rra_id", description="target message's reaction role aware id", type=hikari.OptionType.STRING)
+@lightbulb.command(
+    name="unmount",
+    description="unmounts reaction role awareness to a reaction role message (not undoable)",
+    ephemeral=True,
+)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _unmount_reaction_role_aware(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+
+    guild_id = str(ctx.guild_id)
+    rra_id = ctx.options.rra_id
+
+    cached: typing.Optional[list[ReactionRoleAwareData]] = await get_guild_cache(
+        guild_id=guild_id, key=Cache.REACTION_ROLE_AWARE
+    )
+
+    if cached:
+        for rra in cached:
+            if rra.id == rra_id:
+                cached.remove(rra)  # remove from cache
+
+    # delete reaction aware message data to db
+    await delete_reaction_role_aware(engine, rra_id=rra_id)
+    await ctx.respond(
+        f"deleted reaction role message (`{rra_id}`) from your server!",
+    )
+
+
+@reaction_group.child
+@lightbulb.command(name="awares", description="fetches all reaction role aware messages", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _reaction_role_awares(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+
+    guild_id = str(ctx.guild_id)
+
+    cached: typing.Optional[list[ReactionRoleAwareData]] = await get_guild_cache(
+        guild_id=guild_id, key=Cache.REACTION_ROLE_AWARE
+    )
+
+    if cached:
+        results: typing.Optional[list[ReactionRoleAwareData]] = cached
+
+    else:
+        results = await fetch_all_reaction_role_aware(engine, guild_id)
+
+    paginator = EmbedPaginator()
+
+    if results:
+        for i, data in enumerate(results):
+
+            message_link = generate_message_link(
+                message_id=data.message_id, channel_id=data.channel_id, guild_id=data.guild_id
+            )
+
+            rra_id_str = f"{i+1}. `{data.id}` [link]({message_link})"
+            paginator.add_line(rra_id_str)
+
+        navigator = ButtonNavigator(paginator.build_pages())
+        await navigator.run(ctx)
+
+        await set_guild_cache(guild_id=guild_id, key=Cache.REACTION_ROLE_AWARE, value=results)
+
+    else:
+        await ctx.respond("You don't have reaction role awares added yet!")
+
+
+@reaction_group.child
+@lightbulb.option(
+    name="emoji_name", description="name of the emoji to be used as a reaction role", type=hikari.OptionType.STRING
+)
+@lightbulb.option(
+    name="emoji_id", description="id of the emoji to be used as a reaction role", type=hikari.OptionType.STRING
+)
+@lightbulb.option(
+    name="role", description="role to be set onto the user upon reacting to the emoji", type=hikari.OptionType.ROLE
+)
+@lightbulb.command(name="create", description="create a new reaction role", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _create_reaction_role(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+
+    emoji_name: str = ctx.options.emoji_name
+    emoji_id: str = ctx.options.emoji_id
+    role: hikari.Role = ctx.options.role
+    role_id: str = str(role.id)
+
+    guild_id = str(ctx.guild_id)
+
+    rr_id = generate_reaction_role_id(guild_id=guild_id, emoji_id=emoji_id, emoji_name=emoji_name, role_id=role_id)
+
+    cached: typing.Optional[typing.List[ReactionRoleData]] = await get_guild_cache(guild_id, key=Cache.REACTION_ROLE)
+
+    if cached:
+        # add the new reaction role into cache
+        cached.append(
+            ReactionRoleData(id=rr_id, role_id=role_id, emoji_id=emoji_id, emoji_name=emoji_name, guild_id=guild_id)
+        )
+
+    # add to db
+    await add_reaction_role(
+        engine, rr_id=rr_id, role_id=role_id, emoji_id=emoji_id, emoji_name=emoji_name, guild_id=guild_id
+    )
+
+    await ctx.respond(f"Added new reaction role `role: {rr_id}`")
+
+
+@reaction_group.child
+@lightbulb.option(name="rr_id", description="id of the reaction role to be deleted")
+@lightbulb.command(name="delete", description="delete a new reaction role", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _delete_reaction_role(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+
+    guild_id = str(ctx.guild_id)
+    rr_id: str = ctx.options.rr_id
+
+    cached: typing.Optional[typing.List[ReactionRoleData]] = await get_guild_cache(guild_id, key=Cache.REACTION_ROLE)
+    if cached:
+        # add the new reaction role into cache
+        for rr in cached:
+            if rr.id == rr_id:
+                cached.remove(rr)
+
+    # delete from db
+    await delete_reaction_role(engine, rr_id=rr_id)
+
+    await ctx.respond("Deleted")
+
+
+@reaction_group.child
+@lightbulb.command(name="all", description="get all reaction roles", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _fetch_all_reaction_role(ctx: lightbulb.SlashContext):
+    engine = ctx.bot.d.AsyncEngine
+    guild_id: str = str(ctx.guild_id)
+
+    cached: typing.Optional[typing.List[ReactionRoleData]] = await get_guild_cache(guild_id, key=Cache.REACTION_ROLE)
+
+    if cached:
+
+        roles_view = create_roles_view(cached)
+        await roles_view.run(ctx)
+
+    else:
+        results = await fetch_all_reaction_role(engine, guild_id=guild_id)
+
+        if results:
+
+            roles_view = create_roles_view(results)
+            await roles_view.run(ctx)
+            await set_guild_cache(guild_id=guild_id, key=Cache.REACTION_ROLE, value=results)
+
+        else:
+            await ctx.respond("You don't have reaction role awares added yet!")
+
+
+@reaction_group.child
+@lightbulb.command(name="reaction_role_id", description="get all reaction roles")
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _establish_reaction_role_connection(ctx: lightbulb.SlashContext):
+    # TODO
+    ...
+
+
+# TESTS
+
+
+@reaction_group.child
+@lightbulb.command(
+    name="test_cache", description="unmounts reaction role awareness to a reaction role message (not undoable)"
+)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _test_cache(ctx: lightbulb.SlashContext):
+    message_id = str(ctx.options.message_id)
+    channel_id = str(ctx.channel_id)
+    guild_id = str(ctx.guild_id)
+    engine = ctx.bot.d.AsyncEngine
+    engine = ctx.bot.d.AsyncEngine
+
+    await add_reaction_role_aware(
+        engine,
+        rra_id="ebd25289aaf0efc72aa99da8182b3d77",
+        guild_id=guild_id,
+        channel_id=channel_id,
+        message_id=message_id,
+    )
+
+    await add_reaction_role_aware(
+        engine,
+        rra_id="162658313a6e19270403f6f4f855e3e5",
+        guild_id=guild_id,
+        channel_id=channel_id,
+        message_id=message_id,
+    )
+
+    await add_reaction_role_aware(
+        engine,
+        rra_id="afc8923b6a01b77411cfc5996b90968d",
+        guild_id=guild_id,
+        channel_id=channel_id,
+        message_id=message_id,
+    )
+
+    await ctx.respond("Done test setup")

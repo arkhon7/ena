@@ -1,44 +1,36 @@
 import miru
 import hikari
 import lightbulb
-
-import os
-import dotenv
 import logging
 
+import asyncio
+
+
+import ena.config
+import ena.db
+
+
+# plugins
 from plugins import PLUGINS
 
-
-dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 
-class Ena(lightbulb.BotApp):
-    def __init__(self):
-        super().__init__(token=os.getenv("TOKEN"))
-        miru.load(self)
-        self.load_plugins(PLUGINS)
-        # self.help_command = EnaHalp(self)
+def load_plugins(bot: lightbulb.BotApp):
+    plugins = PLUGINS
 
-        # init
-        self.subscribe(hikari.StartedEvent, self.on_start)
+    for plugin in plugins:
+        try:
+            bot.load_extensions(f"plugins.{plugin}")
+        except lightbulb.ExtensionMissingLoad:
+            logging.debug(f"plugins/{plugin} is not a plugin, skipping...")
 
-    def load_plugins(self, plugins: list):
-        for plugin in plugins:
-            try:
-                self.load_extensions(f"plugins.{plugin}")
-            except lightbulb.ExtensionMissingLoad:
-                logging.debug(f"plugins/{plugin} is not a plugin, skipping...")
+    return bot
 
-    # start event
-    async def on_start(self, _: hikari.StartedEvent):
 
-        await self.load_presence()
-
-    # presence
-    async def load_presence(self):
-
-        await self.update_presence(
+def load_presence(bot: lightbulb.BotApp):
+    async def presence(_: hikari.StartedEvent):
+        await bot.update_presence(
             status=hikari.Status.ONLINE,
             activity=hikari.Activity(
                 name="/help",
@@ -46,35 +38,44 @@ class Ena(lightbulb.BotApp):
             ),
         )
 
+    bot.subscribe(hikari.StartedEvent, presence)
 
-# class EnaHalp(lightbulb.BaseHelpCommand):
-#     async def send_command_help(self, context: lightbulb.Context, command: lightbulb.Command) -> None:
-#         if context.options.command == "calc":
-#             paginated_help = lightbulb.utils.EmbedPaginator(max_chars=1000)
 
-#             with open("tests/li.txt", "r") as sample:
-#                 for line in sample.readlines():
-#                     paginated_help.add_line(line)
-#                 navigator = lightbulb.utils.ButtonNavigator(pages=paginated_help.build_pages())
-#                 await navigator.run(context=context)
-#             # await context.respond(content="help from calc")
+def load_database_engine(bot: lightbulb.BotApp):
 
-#     async def send_bot_help(self, context):
-#         # Override this method to change the message sent when the help command
-#         # is run without any arguments.
-#         ...
+    bot.d.AsyncEngine = ena.db.AsyncEngine
 
-#     async def send_plugin_help(self, context, plugin):
-#         # Override this method to change the message sent when the help command
-#         # argument is the name of a plugin.
-#         ...
+    return bot
 
-#     async def send_group_help(self, context, group):
-#         # Override this method to change the message sent when the help command
-#         # argument is the name or alias of a command group.
-#         ...
 
-#     async def object_not_found(self, context, obj):
-#         # Override this method to change the message sent when help is
-#         # requested for an object that does not exist
-#         ...
+def create_database_schema(bot: lightbulb.BotApp):
+    logging.debug("Initiating migrations")
+
+    engine = bot.d.AsyncEngine
+    base = ena.db.Base
+
+    logging.debug(base.metadata.__dict__)
+
+    async def create_schema():
+        async with engine.begin() as conn:
+            await conn.run_sync(base.metadata.drop_all)
+            await conn.run_sync(base.metadata.create_all)
+
+    asyncio.run(create_schema())
+
+
+def build_bot() -> lightbulb.BotApp:
+
+    TOKEN = ena.config.TOKEN
+    if TOKEN:
+        bot = lightbulb.BotApp(TOKEN, intents=hikari.Intents.ALL_PRIVILEGED)
+
+    miru.load(bot)  # type: ignore
+
+    load_database_engine(bot)
+    load_plugins(bot)
+    load_presence(bot)
+
+    create_database_schema(bot)
+
+    return bot

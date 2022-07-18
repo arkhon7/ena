@@ -12,12 +12,12 @@ python = "3.9.6"
 hikari-lightbulb = "^2.2.0"
 python-dotenv = "^0.19.2"
 simpleeval = "^0.9.12"
-dacite = "^1.6.0"
+SQLAlchemy = {extras = ["asyncio"], version = "^1.4.39"}
+hikari = "^2.0.0-alpha.109"
+hikari-miru = "^1.1.1"
+psycopg2 = "^2.9.3"
+asyncpg = "^0.26.0"
 aiocache = "^0.11.1"
-hikari = {git = "https://github.com/thesadru/hikari", rev = "feat/modal"}
-hikari-miru = {git = "https://github.com/HyperGH/hikari-miru", rev = "feature/modals"}
-dnspython = "1.16.0"
-motor = "2.5.1"
 
 
 [tool.poetry.dev-dependencies]

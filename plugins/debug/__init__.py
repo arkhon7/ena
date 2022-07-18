@@ -1,6 +1,5 @@
 # flake8: noqa
 from .plugin import plugin
-from .models import *
 
 
 def load(bot):
