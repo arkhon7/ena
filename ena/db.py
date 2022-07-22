@@ -12,3 +12,5 @@ AsyncEngine = create_async_engine(ena.config.DB_STRING, echo=True, poolclass=poo
 SyncEngine = create_engine(ena.config.SYNC_DB_STRING, echo=True)
 Base = declarative_base()
 Session = sessionmaker(AsyncEngine, class_=AsyncSession)
+
+

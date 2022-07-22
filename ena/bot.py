@@ -67,11 +67,14 @@ def create_database_schema(bot: lightbulb.BotApp):
 def build_bot() -> lightbulb.BotApp:
 
     TOKEN = ena.config.TOKEN
+    INTENTS = (
+        hikari.Intents.ALL_PRIVILEGED | hikari.Intents.GUILD_MESSAGE_REACTIONS | hikari.Intents.DM_MESSAGE_REACTIONS
+    )
+
     if TOKEN:
-        bot = lightbulb.BotApp(TOKEN, intents=hikari.Intents.ALL_PRIVILEGED)
+        bot = lightbulb.BotApp(TOKEN, intents=INTENTS)
 
     miru.load(bot)  # type: ignore
-
     load_database_engine(bot)
     load_plugins(bot)
     load_presence(bot)
