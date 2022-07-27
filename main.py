@@ -1,5 +1,5 @@
-from ena.bot import build_bot
+from ena import build_bot
 
 if __name__ == "__main__":
-    bot = build_bot()
-    bot.run()
+    ena = build_bot()
+    ena.run()

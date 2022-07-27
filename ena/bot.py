@@ -1,84 +1,47 @@
-import miru
-import hikari
-import lightbulb
+import os
+import dotenv
 import logging
 
-import asyncio
+
+import hikari
+import lightbulb as lb
 
 
-import ena.config
-import ena.db
+from ena.config import load_plugins
+from ena.config import load_database
+from ena.config import load_listeners
 
-
-# plugins
-from plugins import PLUGINS
-
+dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 
-def load_plugins(bot: lightbulb.BotApp):
-    plugins = PLUGINS
-
-    for plugin in plugins:
-        try:
-            bot.load_extensions(f"plugins.{plugin}")
-        except lightbulb.ExtensionMissingLoad:
-            logging.debug(f"plugins/{plugin} is not a plugin, skipping...")
-
-    return bot
+TOKEN = os.getenv("TEST_TOKEN") or "NONE"
 
 
-def load_presence(bot: lightbulb.BotApp):
-    async def presence(_: hikari.StartedEvent):
-        await bot.update_presence(
-            status=hikari.Status.ONLINE,
-            activity=hikari.Activity(
-                name="/help",
-                type=hikari.ActivityType.LISTENING,
-            ),
-        )
+INTENTS = (
+    hikari.Intents.ALL_PRIVILEGED
+    | hikari.Intents.DM_MESSAGE_REACTIONS
+    | hikari.Intents.GUILD_MESSAGE_REACTIONS
+    | hikari.Intents.GUILD_MEMBERS
+    | hikari.Intents.GUILDS
+)
 
-    bot.subscribe(hikari.StartedEvent, presence)
-
-
-def load_database_engine(bot: lightbulb.BotApp):
-
-    bot.d.AsyncEngine = ena.db.AsyncEngine
-
-    return bot
+DEFAULT_GUILDS = (
+    957116703374979093,
+    938346141723033600,
+    938374580244979764,
+)
 
 
-def create_database_schema(bot: lightbulb.BotApp):
-    logging.debug("Initiating migrations")
+@load_listeners
+@load_plugins
+@load_database
+def build_bot() -> lb.BotApp:
 
-    engine = bot.d.AsyncEngine
-    base = ena.db.Base
-
-    logging.debug(base.metadata.__dict__)
-
-    async def create_schema():
-        async with engine.begin() as conn:
-            await conn.run_sync(base.metadata.drop_all)
-            await conn.run_sync(base.metadata.create_all)
-
-    asyncio.run(create_schema())
-
-
-def build_bot() -> lightbulb.BotApp:
-
-    TOKEN = ena.config.TOKEN
-    INTENTS = (
-        hikari.Intents.ALL_PRIVILEGED | hikari.Intents.GUILD_MESSAGE_REACTIONS | hikari.Intents.DM_MESSAGE_REACTIONS
+    bot = lb.BotApp(
+        token=TOKEN,
+        intents=INTENTS,
+        default_enabled_guilds=DEFAULT_GUILDS,
     )
-
-    if TOKEN:
-        bot = lightbulb.BotApp(TOKEN, intents=INTENTS)
-
-    miru.load(bot)  # type: ignore
-    load_database_engine(bot)
-    load_plugins(bot)
-    load_presence(bot)
-
-    create_database_schema(bot)
 
     return bot

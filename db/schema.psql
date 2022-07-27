@@ -1,0 +1,69 @@
+
+CREATE TABLE IF NOT EXISTS schema_info
+(
+    schema_version integer NOT NULL,
+    PRIMARY KEY (schema_version)
+);
+
+
+
+CREATE TABLE IF NOT EXISTS guilds
+(
+    id bigint NOT NULL,
+    PRIMARY KEY (id)
+
+);
+
+CREATE TABLE IF NOT EXISTS users
+(
+    id bigint NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+CREATE TABLE IF NOT EXISTS blocklist
+(
+    id bigint NOT NULL,
+    PRIMARY KEY (id)
+);
+
+
+-- schema for react roles plugin
+
+CREATE TABLE IF NOT EXISTS react_roles
+(
+    id VARCHAR(32),
+    role_id bigint NOT NULL,
+    emoji_id bigint NOT NULL,
+    emoji_name VARCHAR NOT NULL,
+    animated BOOLEAN NOT NULL,
+    guild_id bigint NOT NULL,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+);
+
+CREATE TABLE IF NOT EXISTS react_role_awares
+(
+    id VARCHAR(32),
+    message_id bigint NOT NULL,
+    channel_id bigint NOT NULL,
+    guild_id bigint NOT NULL,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+);
+
+
+CREATE TABLE IF NOT EXISTS react_roles_pairs
+(
+    id VARCHAR(32),
+    rr_id VARCHAR(32), 
+    rr_aware_id VARCHAR(32),
+    guild_id bigint NOT NULL,
+
+    PRIMARY KEY (id),
+    FOREIGN KEY (rr_id) REFERENCES react_roles(id),
+    FOREIGN KEY (rr_aware_id) REFERENCES react_roles_awares(id),
+    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+);

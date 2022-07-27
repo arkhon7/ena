@@ -1,10 +1,9 @@
 from dataclasses import dataclass
-import hashlib
-import typing
+import typing as t
 import re
+import hashlib
 
-
-T = typing.TypeVar("T")
+T = t.TypeVar("T")
 DISCORD_MESSAGE_BASE_URL = "https://discord.com/channels"
 
 NUMBER_REGEX = re.compile("([0-9]+)")
@@ -12,15 +11,15 @@ NUMBER_REGEX = re.compile("([0-9]+)")
 
 @dataclass
 class DiscordMessage:
-    id: str
-    channel_id: str
-    guild_id: str
+    id: int
+    channel_id: int
+    guild_id: int
 
 
 def generate_hash(*args) -> str:
-
-    raw = "".join([arg for arg in args])
+    raw = "".join([str(arg) for arg in args])
     hash = hashlib.md5(raw.encode()).hexdigest()
+
     return hash
 
 
@@ -28,27 +27,15 @@ def generate_message_link(guild_id: str, channel_id: str, message_id: str):
     return f"{DISCORD_MESSAGE_BASE_URL}/{guild_id}/{channel_id}/{message_id}"
 
 
-def parse_message_from_link(message_link: str):
+def parse_message_from_link(message_link: str) -> DiscordMessage:
     ids = NUMBER_REGEX.findall(message_link)
-    guild_id = ids[0]
-    channel_id = ids[1]
-    message_id = ids[2]
+    guild_id = int(ids[0])
+    channel_id = int(ids[1])
+    message_id = int(ids[2])
 
     return DiscordMessage(id=message_id, channel_id=channel_id, guild_id=guild_id)
 
 
-def serialize(serializer: typing.Type[T], **kwargs) -> T:
+def serialize(serializer: t.Type[T], **kwargs) -> T:
     data = serializer(**kwargs)
     return data
-
-
-# def serialize_many(serializer: typing.Type[T], datalist: list[dict]) -> list[T]:
-
-#     return [serialize(serializer, **d) for d in datalist]
-
-
-# def add(a, b):
-#     return sum()
-
-
-# print(serialize(add, (1, 2)))
