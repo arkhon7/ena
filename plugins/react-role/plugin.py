@@ -5,15 +5,20 @@ import hikari
 
 from .controller import (
     fetch_all_reaction_role_awares,
+    fetch_all_reaction_roles,
     fetch_reaction_role_aware,
-    delete_reaction_role_aware,
+    fetch_reaction_role,
     insert_reaction_role_aware,
+    insert_reaction_role,
+    delete_reaction_role_aware,
+    delete_reaction_role,
 )
 
 
 from .helpers import generate_message_link, parse_message_from_link
 
 from .views import create_reaction_role_aware_pagination
+from .views import create_reaction_role_pagination
 
 
 plugin = lightbulb.Plugin("react-role", include_datastore=True)
@@ -40,13 +45,18 @@ async def _create_aware(ctx: lightbulb.SlashContext):
     channel_id = message.channel_id
     message_id = message.id
 
-    await insert_reaction_role_aware(pool, message_id, channel_id, guild_id)
+    await insert_reaction_role_aware(
+        pool,
+        message_id,
+        channel_id,
+        guild_id,
+    )
 
     await ctx.respond("Successfully created a new reaction-role aware message!")
 
 
 @reaction_group.child
-@lightbulb.option("id", "reaction role aware id")
+@lightbulb.option("id", "reaction role aware id", required=True)
 @lightbulb.command("delete_aware", "removes reaction role awareness into a message!", ephemeral=True)
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _delete_aware(ctx: lightbulb.SlashContext):
@@ -58,7 +68,7 @@ async def _delete_aware(ctx: lightbulb.SlashContext):
 
 
 @reaction_group.child
-@lightbulb.option("id", "reaction role aware id")
+@lightbulb.option("id", "reaction role aware id", required=True)
 @lightbulb.command("get_aware", "gets reaction role aware message from your guild by id!", ephemeral=True)
 @lightbulb.implements(lightbulb.SlashSubCommand)
 async def _get_aware(ctx: lightbulb.SlashContext):
@@ -88,60 +98,84 @@ async def _get_all_awares(ctx: lightbulb.SlashContext):
 
 
 # REACTION ROLE
+@reaction_group.child
+@lightbulb.option("role", "role to be assigned when reacting", hikari.OptionType.ROLE, required=True)
+@lightbulb.option("emoji_id", "id of emoji to use in reaction role", required=True)
+@lightbulb.option("emoji_name", "name of emoji to use in reaction role", required=True)
+@lightbulb.option("animated", "whether the emoji in use is animated", hikari.OptionType.BOOLEAN, required=True)
+@lightbulb.command("create_reaction_role", "create a reaction_role!", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _create_reaction_role(ctx: lightbulb.SlashContext):
+    pool: asyncpg.Pool = ctx.bot.d.POOL
+
+    role: hikari.Role = ctx.options.role
+    emoji_id = int(ctx.options.emoji_id)
+    emoji_name = ctx.options.emoji_name
+    animated = ctx.options.animated
+    guild_id = ctx.guild_id
+
+    await insert_reaction_role(
+        pool,
+        role.id,
+        emoji_id,
+        emoji_name,
+        animated,
+        guild_id,
+    )
+
+    # make this a func
+    if animated:
+        emoji = f"<a:{emoji_name}:{emoji_id}>"
+    else:
+        emoji = f"<:{emoji_name}:{emoji_id}>"
+    #
+
+    await ctx.respond(f"Added new reaction role ({emoji}) to your server!")
 
 
-# BULK COMMANDS
+@reaction_group.child
+@lightbulb.option("id", "reaction role id", required=True)
+@lightbulb.command("delete_reaction_role", "deletes a reaction role from your server!", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _delete_reaction_role(ctx: lightbulb.SlashContext):
+    pool: asyncpg.Pool = ctx.bot.d.POOL
+
+    await delete_reaction_role(pool, ctx.options.id, ctx.guild_id)
+    await ctx.respond("Successfully deleted a reaction role!")
 
 
-# setup test data
-# @reaction_group.child
-# @lightbulb.command(name="setup_test", description="initiate test setup", ephemeral=True)
-# @lightbulb.implements(lightbulb.SlashSubCommand)
-# async def _setup_test(ctx: lightbulb.SlashContext):
-#     engine = ctx.bot.d.AsyncEngine
-#     guild_id = str(ctx.guild_id)
+@reaction_group.child
+@lightbulb.option("id", "reaction role id", required=True)
+@lightbulb.command("get_reaction_role", "get the reaction role info", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _get_reaction_role(ctx: lightbulb.SlashContext):
+    pool: asyncpg.Pool = ctx.bot.d.POOL
 
-#     # ROLES
-#     GAMES_ROLE = "995564101902278736"
-#     ANIME_ROLE = "995335085698076732"
-#     MEMES_ROLE = "995335303927697510"
+    reaction_role = await fetch_reaction_role(pool, ctx.options.id)
 
-#     # EMOJIS
-#     KOKO_RAGE_EMOJI_ID = "979224342762246184"
-#     KOKO_CHILL_EMOJI_ID = "979223909981356093"
-#     KOKO_CLAP_EMOJI_ID = "979225151566667807"
+    embed = hikari.Embed(title="Here is your Reaction Role")
+    embed.add_field("id", reaction_role.id)
+    embed.add_field("role", f"<@&{reaction_role.role_id}>")
 
-#     await insert_react_role(
-#         engine,
-#         emoji_id=KOKO_RAGE_EMOJI_ID,
-#         emoji_name="koko_rage",
-#         animated=True,
-#         guild_id=guild_id,
-#         role_id=GAMES_ROLE,
-#     )
+    if reaction_role.animated:
+        emoji = f"<a:{reaction_role.emoji_name}:{reaction_role.emoji_id}>"
+    else:
+        emoji = f"<:{reaction_role.emoji_name}:{reaction_role.emoji_id}>"
 
-#     await insert_react_role(
-#         engine,
-#         emoji_id=KOKO_CHILL_EMOJI_ID,
-#         emoji_name="koko_chill",
-#         animated=True,
-#         guild_id=guild_id,
-#         role_id=ANIME_ROLE,
-#     )
+    embed.add_field("emoji", emoji)
 
-#     await insert_react_role(
-#         engine,
-#         emoji_id=KOKO_CLAP_EMOJI_ID,
-#         emoji_name="koko_clap",
-#         animated=True,
-#         guild_id=guild_id,
-#         role_id=MEMES_ROLE,
-#     )
+    await ctx.respond(embed=embed)
 
-#     message = parse_message_from_link(
-#         "https://discord.com/channels/957116703374979093/998595108482068621/1000047036416151594"
-#     )
 
-#     await insert_react_role_aware(engine, message.id, message.channel_id, message.guild_id)
+@reaction_group.child
+@lightbulb.command("get_all_reaction_roles", "gets all reaction roles from your server!", ephemeral=True)
+@lightbulb.implements(lightbulb.SlashSubCommand)
+async def _get_all_reaction_roles(ctx: lightbulb.SlashContext):
+    pool: asyncpg.Pool = ctx.bot.d.POOL
 
-#     await ctx.respond("DONE TEST SETUP")
+    all_reaction_roles = await fetch_all_reaction_roles(pool, ctx.guild_id)
+
+    if all_reaction_roles:
+        paginator = create_reaction_role_pagination(all_reaction_roles)
+
+        await paginator.run(ctx)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import asyncpg
 import typing as t
 
@@ -14,39 +12,48 @@ from ena.database import fetch
 from ena.database import fetchrow
 from ena.database import execute
 
-from aiocache import cached
-from aiocache import Cache
-from aiocache.serializers import PickleSerializer
+
+from ena.cache import set, get, evict
+
+
+# from aiocache import cached
+# from aiocache import Cache
+# from aiocache.serializers import PickleSerializer
 
 T = t.TypeVar("T")
 
 
-def create_key(func: t.Callable, *args, **kwargs):
-
-    args_k = "".join([str(arg) for arg in args if not isinstance(arg, asyncpg.Pool)])
-    kwargs_k = "".join([str(kwarg) for kwarg in kwargs if not isinstance(kwarg, asyncpg.Pool)])
-
-    return func.__name__ + args_k + kwargs_k
-
-
-@cached(ttl=30, serializer=PickleSerializer(), key_builder=create_key)
 async def fetch_all_reaction_role_awares(pool: asyncpg.Pool, guild_id: int) -> t.List[ReactionRoleAware]:
 
-    records = await fetch(pool, "SELECT * FROM react_role_awares WHERE guild_id = $1", guild_id)
+    cache_key = f"{guild_id}:reaction_role_aware:"
+    cached = await get(cache_key)
 
-    serialized: t.List[ReactionRoleAware] = [serialize(ReactionRoleAware, record) for record in records]
+    if cached:
+        return cached
 
-    return serialized
+    else:
+        records = await fetch(pool, "SELECT * FROM react_role_awares WHERE guild_id = $1", guild_id)
+        serialized_records: t.List[ReactionRoleAware] = [serialize(ReactionRoleAware, record) for record in records]
+
+        await set(cache_key, serialized_records, ttl=300)
+        return serialized_records
 
 
-@cached(ttl=30, serializer=PickleSerializer(), key_builder=create_key)
-async def fetch_reaction_role_aware(pool: asyncpg.Pool, id: int) -> ReactionRoleAware:
+async def fetch_reaction_role_aware(pool: asyncpg.Pool, id: str) -> ReactionRoleAware:
 
-    record = await fetchrow(pool, "SELECT * FROM react_role_awares WHERE id = $1", id)
+    cache_key = f"{id}:reaction_role:"
+    cached = await get(cache_key)
 
-    serialized: ReactionRoleAware = serialize(ReactionRoleAware, record)
+    if cached:
+        return cached
 
-    return serialized
+    else:
+        record = await fetchrow(pool, "SELECT * FROM react_role_awares WHERE id = $1", id)
+
+        serialized_record: ReactionRoleAware = serialize(ReactionRoleAware, record)
+
+        await set(cache_key, serialized_record, ttl=60)
+        return serialized_record
 
 
 async def insert_reaction_role_aware(pool: asyncpg.Pool, message_id: int, channel_id: int, guild_id: int):
@@ -65,17 +72,90 @@ async def insert_reaction_role_aware(pool: asyncpg.Pool, message_id: int, channe
         guild_id,
     )
 
+    rr_aware_list_key = f"{guild_id}:reaction_role_aware:"
+    await evict(rr_aware_list_key)
+
 
 async def delete_reaction_role_aware(pool: asyncpg.Pool, id: int, guild_id: int):
 
     await execute(pool, "DELETE FROM react_role_awares WHERE id = $1", id)
 
-    # delete cache
-    cached_awares: Cache.MEMORY = fetch_all_reaction_role_awares.cache
-    cached_aware: Cache.MEMORY = fetch_reaction_role_aware.cache
+    # evict cache
+    rr_aware_key = f"{id}:reaction_role:"
+    rr_aware_list_key = f"{guild_id}:reaction_role_aware:"
 
-    cached_key_by_id = create_key(fetch_reaction_role_aware, id)
-    cached_key_by_guild_id = create_key(fetch_all_reaction_role_awares, guild_id)
+    await evict(rr_aware_key)
+    await evict(rr_aware_list_key)
 
-    await cached_aware.delete(cached_key_by_id)  # delete the cached id
-    await cached_awares.delete(cached_key_by_guild_id)  # delete the cached list by id
+
+# reaction role
+async def fetch_all_reaction_roles(pool: asyncpg.Pool, guild_id: int) -> t.List[ReactionRole]:
+
+    cache_key = f"{guild_id}:reaction_role:"
+    cached = await get(cache_key)
+
+    if cached:
+        return cached
+
+    else:
+        records = await fetch(pool, "SELECT * FROM react_roles WHERE guild_id = $1", guild_id)
+        serialized_records: t.List[ReactionRole] = [serialize(ReactionRole, record) for record in records]
+
+        await set(cache_key, serialized_records, ttl=300)
+        return serialized_records
+
+
+async def fetch_reaction_role(pool: asyncpg.Pool, id: str) -> ReactionRole:
+
+    cache_key = f"{id}:reaction_role:"
+    cached = await get(cache_key)
+
+    if cached:
+        return cached
+
+    else:
+        record = await fetchrow(pool, "SELECT * FROM react_roles WHERE id = $1", id)
+
+        serialized_record: ReactionRole = serialize(ReactionRole, record)
+
+        await set(cache_key, serialized_record, ttl=60)
+        return serialized_record
+
+
+async def insert_reaction_role(
+    pool: asyncpg.Pool, role_id: int, emoji_id: int, emoji_name: str, animated: bool, guild_id: int
+):
+    id = generate_hash(role_id, emoji_id, emoji_name, animated, guild_id)  # primary key id
+
+    await execute(
+        pool,
+        """
+        INSERT INTO react_roles (id, role_id, emoji_id, emoji_name, animated, guild_id)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        """,
+        id,
+        role_id,
+        emoji_id,
+        emoji_name,
+        animated,
+        guild_id,
+    )
+
+    rr_list_key = f"{guild_id}:reaction_role:"
+    await evict(rr_list_key)
+
+
+async def delete_reaction_role(pool: asyncpg.Pool, id: int, guild_id: int):
+
+    await execute(pool, "DELETE FROM react_roles WHERE id = $1", id)
+
+    # evict cache
+    rr_key = f"{id}:reaction_role:"
+    rr_list_key = f"{guild_id}:reaction_role:"
+
+    await evict(rr_key)
+    await evict(rr_list_key)
+
+
+# REACTION ROLE PAIRS
+# TODO
