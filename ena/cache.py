@@ -1,13 +1,10 @@
 import logging
 
-import typing
-import hashlib
-
-
+import typing as t
 import aiocache
 
 
-T = typing.TypeVar("T")
+T = t.TypeVar("T")
 
 
 _CACHE = aiocache.Cache()
@@ -24,12 +21,14 @@ async def get(key: str) -> T:
     return value
 
 
+async def clear_all():
+    await _CACHE.clear()
+
+
 async def evict(key: str):
     await _CACHE.delete(key)
 
 
-def generate_cache_key(identifier: str) -> str:
-    hashing_string: str = identifier
-    cache_key: str = hashlib.sha1(hashing_string.encode()).hexdigest()
-
-    return cache_key
+class CacheOption:
+    EMOJI_ROLE_PAIRS = ":ERP:"
+    ACTIVE_EMOJI_ROLE_PAIRS = ":AERP:"

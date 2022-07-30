@@ -5,7 +5,6 @@ __pycache__
 poetry_cache
 
 # dev
-tests
 .venv
 .env
 mypy.ini

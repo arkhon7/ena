@@ -16,7 +16,7 @@ def load_plugins(func: t.Callable[[], lb.BotApp]):
     PLUGINS = [
         "plugins.debug",
         "plugins.utils",
-        "plugins.react-role",
+        "plugins.react_role",
     ]
 
     def _():

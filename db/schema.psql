@@ -1,3 +1,17 @@
+-- remove this snippet after testing (this deletes all tables and their data before making the schema)
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    -- if the schema you operate on is not "current", you will want to
+    -- replace current_schema() in query with 'schematodeletetablesfrom'
+    -- *and* update the generate 'DROP...' accordingly.
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema()) LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
+
+
+
 
 CREATE TABLE IF NOT EXISTS schema_info
 (
@@ -28,42 +42,37 @@ CREATE TABLE IF NOT EXISTS blocklist
 );
 
 
--- schema for react roles plugin
 
-CREATE TABLE IF NOT EXISTS react_roles
+-- schema for reaction roles plugin
+
+CREATE TABLE IF NOT EXISTS emoji_role_pairs
 (
-    id VARCHAR(32),
+    id VARCHAR,
     role_id bigint NOT NULL,
     emoji_id bigint NOT NULL,
-    emoji_name VARCHAR NOT NULL,
-    animated BOOLEAN NOT NULL,
+    emoji_name VARCHAR,
+    is_animated BOOLEAN NOT NULL,
+
     guild_id bigint NOT NULL,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+    FOREIGN KEY (guild_id) 
+        REFERENCES guilds(id)
 );
 
-CREATE TABLE IF NOT EXISTS react_role_awares
+
+CREATE TABLE IF NOT EXISTS active_emoji_role_pairs
 (
-    id VARCHAR(32),
+    id VARCHAR,
     message_id bigint NOT NULL,
     channel_id bigint NOT NULL,
     guild_id bigint NOT NULL,
 
-    PRIMARY KEY (id),
-    FOREIGN KEY (guild_id) REFERENCES guilds(id)
-);
-
-
-CREATE TABLE IF NOT EXISTS react_roles_pairs
-(
-    id VARCHAR(32),
-    rr_id VARCHAR(32), 
-    rr_aware_id VARCHAR(32),
-    guild_id bigint NOT NULL,
+    pair_id VARCHAR,
 
     PRIMARY KEY (id),
-    FOREIGN KEY (rr_id) REFERENCES react_roles(id),
-    FOREIGN KEY (rr_aware_id) REFERENCES react_roles_awares(id),
-    FOREIGN KEY (guild_id) REFERENCES guilds(id)
+    FOREIGN KEY (pair_id)
+        REFERENCES emoji_role_pairs(id)
+
 );
+

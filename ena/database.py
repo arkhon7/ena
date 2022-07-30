@@ -4,6 +4,9 @@ import logging
 import lightbulb as lb
 import typing as t
 
+from ena.cache import set, get, evict
+
+
 logging = logging.getLogger(__name__)  # type:ignore
 
 
@@ -38,24 +41,45 @@ async def initialize_schema(pool: asyncpg.Pool, schema_path: str = None):
 
 
 # functions
-async def fetch(pool: asyncpg.Pool, query: str, *args, timeout=None) -> t.List[asyncpg.Record]:
+async def fetch(pool: asyncpg.Pool, query: str, *args, cache_key: str, timeout=None) -> t.List[asyncpg.Record]:
     conn: asyncpg.Connection
 
     async with pool.acquire() as conn:
-        records = await conn.fetch(query, *args, timeout=timeout)
-        return records
+
+        cached: t.List[asyncpg.Record] = await get(cache_key)
+        if cached:
+            return cached
+
+        else:
+            records = await conn.fetch(query, *args, timeout=timeout)
+
+            await set(cache_key, records)
+            return records
 
 
-async def fetchrow(pool: asyncpg.Pool, query: str, *args, timeout=None) -> asyncpg.Record:
+async def fetchrow(pool: asyncpg.Pool, query: str, *args, cache_key: str, timeout=None) -> asyncpg.Record:
     conn: asyncpg.Connection
 
     async with pool.acquire() as conn:
-        record = await conn.fetchrow(query, *args, timeout=timeout)
-        return record
+
+        cached: t.List[asyncpg.Record] = await get(cache_key)
+        if cached:
+            return cached
+
+        else:
+            record = await conn.fetchrow(query, *args, timeout=timeout)
+
+            await set(cache_key, record)
+            return record
 
 
-async def execute(pool: asyncpg.Pool, query: str, *args, timeout=None) -> None:
+async def execute(pool: asyncpg.Pool, query: str, *args, timeout=None, evict_keys: t.List[str] = None) -> None:
     conn: asyncpg.Connection
 
     async with pool.acquire() as conn:
         await conn.execute(query, *args, timeout=timeout)
+
+        if evict_keys:
+
+            for key in evict_keys:
+                await evict(key)

@@ -16,14 +16,25 @@ class DiscordMessage:
     guild_id: int
 
 
-def generate_hash(*args) -> str:
+def create_hash(*args) -> str:
     raw = "".join([str(arg) for arg in args])
     hash = hashlib.md5(raw.encode()).hexdigest()
 
     return hash
 
 
-def generate_message_link(guild_id: str, channel_id: str, message_id: str):
+def create_emoji_code(emoji_id: int, emoji_name: str, is_animated: bool):
+
+    if is_animated:
+        emoji = f"<a:{emoji_name}:{emoji_id}>"
+
+    else:
+        emoji = f"<:{emoji_name}:{emoji_id}>"
+
+    return emoji
+
+
+def create_message_link(guild_id: int, channel_id: int, message_id: int):
     return f"{DISCORD_MESSAGE_BASE_URL}/{guild_id}/{channel_id}/{message_id}"
 
 
