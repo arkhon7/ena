@@ -15,7 +15,7 @@ from ena.listeners import _on_starting
 def load_plugins(func: t.Callable[[], lb.BotApp]):
     PLUGINS = [
         "plugins.greet",
-        "plugins.create",
+        "plugins.utils",
         "plugins.react_role",
     ]
 
