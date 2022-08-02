@@ -15,7 +15,7 @@ dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 
-TOKEN = os.getenv("TEST_TOKEN") or "NONE"
+TOKEN = os.getenv("TOKEN") or "NONE"
 
 
 INTENTS = (
