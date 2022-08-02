@@ -22,6 +22,7 @@ INTENTS = (
     hikari.Intents.ALL_PRIVILEGED
     | hikari.Intents.DM_MESSAGE_REACTIONS
     | hikari.Intents.GUILD_MESSAGE_REACTIONS
+    | hikari.Intents.GUILD_MESSAGES
     | hikari.Intents.GUILD_MEMBERS
     | hikari.Intents.GUILDS
 )

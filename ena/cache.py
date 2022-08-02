@@ -17,7 +17,6 @@ async def set(key: str, value: T, ttl=60) -> None:
 
 async def get(key: str) -> T:
     value: T = await _CACHE.get(key=key)
-
     return value
 
 
@@ -30,5 +29,10 @@ async def evict(key: str):
 
 
 class CacheOption:
-    EMOJI_ROLE_PAIRS = ":ERP:"
-    ACTIVE_EMOJI_ROLE_PAIRS = ":AERP:"
+    """
+    Cache identifiers for salting the hash, this is to
+    ensure correct mapping of data
+    """
+
+    EMOJI_ROLE_PAIRS = "EMOJI_ROLE_PAIRS"
+    ACTIVE_EMOJI_ROLE_PAIRS = "ACTIVE_EMOJI_ROLE_PAIRS"

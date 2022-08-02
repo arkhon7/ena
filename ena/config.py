@@ -14,8 +14,8 @@ from ena.listeners import _on_starting
 # plugins
 def load_plugins(func: t.Callable[[], lb.BotApp]):
     PLUGINS = [
-        "plugins.debug",
-        "plugins.utils",
+        "plugins.greet",
+        "plugins.create",
         "plugins.react_role",
     ]
 
@@ -46,22 +46,6 @@ def load_database(func: t.Callable[[], lb.BotApp]) -> t.Callable:
         return bot
 
     return _
-
-
-# cache
-# maybe not needed (for now)
-
-# def load_cache(func: t.Callable[[], lb.BotApp]) -> t.Callable:
-
-#     CACHE = aiocache.Cache()
-
-#     def _():
-#         bot = func()
-#         bot.d.CACHE = CACHE
-
-#         return bot
-
-#     return _
 
 
 # listeners

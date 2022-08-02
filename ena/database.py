@@ -41,35 +41,47 @@ async def initialize_schema(pool: asyncpg.Pool, schema_path: str = None):
 
 
 # functions
-async def fetch(pool: asyncpg.Pool, query: str, *args, cache_key: str, timeout=None) -> t.List[asyncpg.Record]:
+async def fetch(pool: asyncpg.Pool, query: str, *args, cache_key: str = None, timeout=None) -> t.List[asyncpg.Record]:
     conn: asyncpg.Connection
 
-    async with pool.acquire() as conn:
-
+    if cache_key:
         cached: t.List[asyncpg.Record] = await get(cache_key)
         if cached:
+
             return cached
 
         else:
-            records = await conn.fetch(query, *args, timeout=timeout)
+            async with pool.acquire() as conn:
+                records = await conn.fetch(query, *args, timeout=timeout)
+                await set(cache_key, records)
 
-            await set(cache_key, records)
+                return records
+
+    else:
+        async with pool.acquire() as conn:
+            records = await conn.fetch(query, *args, timeout=timeout)
             return records
 
 
-async def fetchrow(pool: asyncpg.Pool, query: str, *args, cache_key: str, timeout=None) -> asyncpg.Record:
+async def fetchrow(pool: asyncpg.Pool, query: str, *args, cache_key: str = None, timeout=None) -> asyncpg.Record:
     conn: asyncpg.Connection
 
-    async with pool.acquire() as conn:
-
+    if cache_key:
         cached: t.List[asyncpg.Record] = await get(cache_key)
+
         if cached:
             return cached
 
         else:
+            async with pool.acquire() as conn:
+                record = await conn.fetchrow(query, *args, timeout=timeout)
+                await set(cache_key, record)
+
+                return record
+    else:
+        async with pool.acquire() as conn:
             record = await conn.fetchrow(query, *args, timeout=timeout)
 
-            await set(cache_key, record)
             return record
 
 
