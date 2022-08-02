@@ -20,7 +20,16 @@ async def create_command():
 @lb.option("description", "description of the embed", required=False)
 @lb.option("color", "color of the embed", required=False)
 @lb.option("image", "image of the embed", hk.OptionType.ATTACHMENT, required=False)
+@lb.option("image_url", "image url of the embed", required=False)
 @lb.option("thumbnail", "thumbnail of the embed", hk.OptionType.ATTACHMENT, required=False)
+@lb.option("thumbnail_url", "thumbnail url of the embed", required=False)
+@lb.option(
+    "anonymous",
+    "whether or not the embed will display the user or not",
+    hk.OptionType.BOOLEAN,
+    required=False,
+    default=False,
+)
 @lb.command("embed", "create an embed")
 @lb.implements(lb.SlashSubCommand)
 async def _create_embed(ctx: lb.SlashContext):
@@ -45,15 +54,33 @@ async def _create_embed(ctx: lb.SlashContext):
         img_bytes = await image.read()
         builder.add_image(img_bytes)
 
+    if image_url := ctx.options.image_url:
+        builder.add_image(hk.URL(image_url))
+
     if thumbnail := ctx.options.thumbnail:
         tn_bytes = await thumbnail.read()
         builder.add_thumbnail(tn_bytes)
 
+    if thumbnail_url := ctx.options.thumbnail_url:
+
+        builder.add_thumbnail(hk.URL(thumbnail_url))
+
     if (embed := builder.build()) is not None:
 
-        embed.set_footer(
-            text=f"made by {ctx.user.username}#{ctx.user.discriminator}",
-            icon=ctx.user.avatar_url,
-        )
+        anonymous = ctx.options.anonymous
 
+        if not anonymous:
+
+            embed.set_footer(
+                text=f"by {ctx.user.username}#{ctx.user.discriminator}",
+                icon=ctx.user.avatar_url,
+            )
+
+        # @lb.option("channel", "channel to send the embed", hk.OptionType.CHANNEL, required=False) TODO
+        # if channel:
+
+        #     await ctx.bot.rest.create_message(channel.id)
         await ctx.respond(embed=embed)
+
+    else:
+        await ctx.respond("Please put at least one info in the embed!")
