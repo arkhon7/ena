@@ -24,12 +24,6 @@ def create_hash(*args) -> str:
     return hash
 
 
-def create_cache_key(*args) -> str:
-
-    key = ":".join([f"{arg}" for arg in args])
-    return key
-
-
 def create_emoji_code(emoji_id: int, emoji_name: str, is_animated: bool):
 
     if is_animated:

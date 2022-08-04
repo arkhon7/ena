@@ -28,11 +28,7 @@ async def evict(key: str):
     await _CACHE.delete(key)
 
 
-class CacheOption:
-    """
-    Cache identifiers for salting the hash, this is to
-    ensure correct mapping of data
-    """
+def create_cache_key(*args) -> str:
 
-    EMOJI_ROLE_PAIRS = "EMOJI_ROLE_PAIRS"
-    ACTIVE_EMOJI_ROLE_PAIRS = "ACTIVE_EMOJI_ROLE_PAIRS"
+    key = ":".join([f"{arg}" for arg in args])
+    return key

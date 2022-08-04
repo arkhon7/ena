@@ -3,10 +3,11 @@ import nest_asyncio
 
 import asyncio
 import asyncpg
-import os
 import dotenv
 import pytest
 import logging
+from ena.bot import DSN, SCHEMA
+from ena.database import EnaDatabase
 
 from ena.helpers import create_hash, parse_message_from_link
 from ena.cache import clear_all
@@ -113,16 +114,6 @@ def get_mock_active_pair_list():
     return ACTIVE_PAIR_DATA
 
 
-async def test_setup(pool: asyncpg.Pool):
-    conn: asyncpg.Connection
-    async with pool.acquire() as conn:
-
-        with open("db/schema.psql") as schema:
-            await conn.execute(schema.read())
-
-            await conn.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", GUILD_ID)
-
-
 @pytest.fixture
 def event_loop():
     policy = asyncio.WindowsSelectorEventLoopPolicy()
@@ -139,15 +130,21 @@ def event_loop():
 
 
 @pytest.fixture
-def pool(event_loop: asyncio.AbstractEventLoop):
-    async def get_pool():
-        pool = await asyncpg.create_pool(os.getenv("TEST_DB_STRING"))
-        return pool
+def database(event_loop: asyncio.AbstractEventLoop):
+    async def get_db():
 
-    pool = event_loop.run_until_complete(get_pool())
+        ena_db = EnaDatabase(dsn=DSN, schema=SCHEMA)
+
+        await ena_db.connect()
+        await ena_db.create_schema()
+        await ena_db.initialize_guilds((957116703374979093, 938374580244979764))
+
+        return ena_db
+
+    database = event_loop.run_until_complete(get_db())
     event_loop.close()
 
-    return pool
+    return database
 
 
 @pytest.fixture
@@ -169,27 +166,26 @@ async def aio_benchmark(benchmark, event_loop):
 # TESTS ON REACTION ROLE PLUGIN CONTROLLERS
 
 
-@pytest.fixture
-def setup_method(pool: asyncpg.Pool, event_loop):
-    async def _setup():
+# @pytest.fixture
+# def setup_method(database: EnaDatabase, event_loop):
+#     async def _setup():
 
-        await test_setup(pool)
-        await clear_all()
+#         await clear_all()
 
-    event_loop.run_until_complete(_setup())
-    yield
+#     event_loop.run_until_complete(_setup())
+#     yield
 
-    event_loop.run_until_complete(pool.close())
+#     event_loop.run_until_complete(database._pool.close())
 
 
 @pytest.mark.asyncio
-async def test_fetch_all_pairs(pool):
+async def test_fetch_all_pairs(database):
     # INSERTION OF DATA
     mock = get_mock_pair_list()
     for pair in mock:
 
         await add_pair(
-            pool,
+            database,
             pair.id,
             pair.role_id,
             pair.emoji_id,
@@ -199,19 +195,19 @@ async def test_fetch_all_pairs(pool):
         )
 
     # FETCH
-    records = await fetch_all_pairs(pool, GUILD_ID)
+    records = await fetch_all_pairs(database, GUILD_ID)
 
     assert len(records) == len(mock)
 
 
 @pytest.mark.asyncio
-async def test_fetch_pair(pool):
+async def test_fetch_pair(database):
     # INSERTION OF DATA
     mock = get_mock_pair_list()
     for pair in mock:
 
         await add_pair(
-            pool,
+            database,
             pair.id,
             pair.role_id,
             pair.emoji_id,
@@ -222,7 +218,7 @@ async def test_fetch_pair(pool):
 
         # FETCH
 
-        record = await fetch_pair(pool, pair.id, GUILD_ID)
+        record = await fetch_pair(database, pair.id, GUILD_ID)
 
         erp = EmojiRolePair.from_dict(record)
 
@@ -230,11 +226,11 @@ async def test_fetch_pair(pool):
 
 
 @pytest.mark.asyncio
-async def test_add_pair(pool):
+async def test_add_pair(database):
     for pair in get_mock_pair_list():
 
         await add_pair(
-            pool,
+            database,
             pair.id,
             pair.role_id,
             pair.emoji_id,
@@ -245,11 +241,11 @@ async def test_add_pair(pool):
 
 
 @pytest.mark.asyncio
-async def test_add_pair_duplication_error(pool):
+async def test_add_pair_duplication_error(database):
     for pair in get_mock_pair_list():
 
         await add_pair(
-            pool,
+            database,
             pair.id,
             pair.role_id,
             pair.emoji_id,
@@ -261,7 +257,7 @@ async def test_add_pair_duplication_error(pool):
     for pair in get_mock_pair_list():
         with pytest.raises(asyncpg.UniqueViolationError):
             await add_pair(
-                pool,
+                database,
                 pair.id,
                 pair.role_id,
                 pair.emoji_id,
@@ -272,12 +268,12 @@ async def test_add_pair_duplication_error(pool):
 
 
 @pytest.mark.asyncio
-async def test_delete_pair(pool):
+async def test_delete_pair(database):
     # INSERTING DATA
     for pair in get_mock_pair_list():
 
         await add_pair(
-            pool,
+            database,
             pair.id,
             pair.role_id,
             pair.emoji_id,
@@ -289,11 +285,11 @@ async def test_delete_pair(pool):
     # DELETING DATA
     for pair in get_mock_pair_list():
 
-        await delete_pair(pool, pair.id, GUILD_ID)
+        await delete_pair(database, pair.id, GUILD_ID)
 
 
 # @pytest.mark.asyncio
-# async def test_fetch_all_active_pairs(pool):
+# async def test_fetch_all_active_pairs(database):
 
 #     aerp_mock = get_mock_active_pair_list()
 #     erp_mock = get_mock_pair_list()
@@ -302,7 +298,7 @@ async def test_delete_pair(pool):
 #     for erp in erp_mock:
 
 #         await add_pair(
-#             pool,
+#             database,
 #             erp.id,
 #             erp.role_id,
 #             erp.emoji_id,
@@ -319,7 +315,7 @@ async def test_delete_pair(pool):
 #         )
 
 #         await add_active_pair(
-#             pool,
+#             database,
 #             aerp.id,
 #             pair_id,
 #             aerp.message_id,
@@ -327,13 +323,13 @@ async def test_delete_pair(pool):
 #             aerp.guild_id,
 #         )
 
-#     records = await fetch_all_active_pairs(pool, GUILD_ID)
+#     records = await fetch_all_active_pairs(database, GUILD_ID)
 
 #     assert len(records) == len(aerp_mock)
 
 
 @pytest.mark.asyncio
-async def test_fetch_all_active_pairs_by_message(pool):
+async def test_fetch_all_active_pairs_by_message(database):
     aerp_mock = get_mock_active_pair_list()
     erp_mock = get_mock_pair_list()
 
@@ -341,7 +337,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
     for erp in erp_mock:
 
         await add_pair(
-            pool,
+            database,
             erp.id,
             erp.role_id,
             erp.emoji_id,
@@ -358,7 +354,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
         )
 
         await add_active_pair(
-            pool,
+            database,
             aerp.id,
             pair_id,
             aerp.message_id,
@@ -366,13 +362,13 @@ async def test_fetch_all_active_pairs_by_message(pool):
             aerp.guild_id,
         )
 
-    records = await fetch_all_active_pairs_by_message(pool, aerp_mock[0].message_id, aerp_mock[0].guild_id)
+    records = await fetch_all_active_pairs_by_message(database, aerp_mock[0].message_id, aerp_mock[0].guild_id)
 
     assert len(records) == (len(aerp_mock) / len(MESSAGES))
 
 
 # @pytest.mark.asyncio
-# async def test_fetch_active_pair(pool):
+# async def test_fetch_active_pair(database):
 #     aerp_mock = get_mock_active_pair_list()
 #     erp_mock = get_mock_pair_list()
 
@@ -380,7 +376,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #     for erp in erp_mock:
 
 #         await add_pair(
-#             pool,
+#             database,
 #             erp.id,
 #             erp.role_id,
 #             erp.emoji_id,
@@ -397,7 +393,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #         )
 
 #         await add_active_pair(
-#             pool,
+#             database,
 #             aerp.id,
 #             pair_id,
 #             aerp.message_id,
@@ -405,7 +401,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #             aerp.guild_id,
 #         )
 
-#     record = await fetch_active_pair(pool, aerp_mock[0].id, GUILD_ID)
+#     record = await fetch_active_pair(database, aerp_mock[0].id, GUILD_ID)
 #     active_pair = ActiveEmojiRolePair.from_dict(record)
 
 #     assert isinstance(active_pair.id, str)
@@ -418,7 +414,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 
 
 # @pytest.mark.asyncio
-# async def test_delete_active_pair(pool):
+# async def test_delete_active_pair(database):
 
 #     aerp_mock = get_mock_active_pair_list()
 #     erp_mock = get_mock_pair_list()
@@ -427,7 +423,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #     for erp in erp_mock:
 
 #         await add_pair(
-#             pool,
+#             database,
 #             erp.id,
 #             erp.role_id,
 #             erp.emoji_id,
@@ -444,7 +440,7 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #         )
 
 #         await add_active_pair(
-#             pool,
+#             database,
 #             aerp.id,
 #             pair_id,
 #             aerp.message_id,
@@ -459,26 +455,26 @@ async def test_fetch_all_active_pairs_by_message(pool):
 #         )
 
 #         await delete_active_pair(
-#             pool,
+#             database,
 #             aerp.id,
 #             aerp.message_id,
 #             aerp.channel_id,
 #             aerp.guild_id,
 #         )
 
-#     records = await fetch_all_active_pairs(pool, GUILD_ID)
+#     records = await fetch_all_active_pairs(database, GUILD_ID)
 #     assert len(records) == 0
 
 
 @pytest.mark.asyncio
-async def test_caching_fetched_pairs(pool, aio_benchmark):
+async def test_caching_fetched_pairs(database, aio_benchmark):
     # Insert pair data
     erp_mock = get_mock_pair_list()
 
     for erp in erp_mock:
 
         await add_pair(
-            pool,
+            database,
             erp.id,
             erp.role_id,
             erp.emoji_id,
@@ -490,21 +486,21 @@ async def test_caching_fetched_pairs(pool, aio_benchmark):
     @aio_benchmark
     async def _benchmarks():
         for _ in range(1000):
-            await fetch_all_pairs(pool, GUILD_ID)
+            await fetch_all_pairs(database, GUILD_ID)
 
         for _ in range(1000):
-            await fetch_pair(pool, erp_mock[0].id, GUILD_ID)
+            await fetch_pair(database, erp_mock[0].id, GUILD_ID)
 
 
 @pytest.mark.asyncio
-async def test_caching_fetched_active_pairs(pool, aio_benchmark):
+async def test_caching_fetched_active_pairs(database, aio_benchmark):
     erp_mock = get_mock_pair_list()
     aerp_mock = get_mock_active_pair_list()
 
     for erp in erp_mock:
 
         await add_pair(
-            pool,
+            database,
             erp.id,
             erp.role_id,
             erp.emoji_id,
@@ -521,7 +517,7 @@ async def test_caching_fetched_active_pairs(pool, aio_benchmark):
         )
 
         await add_active_pair(
-            pool,
+            database,
             aerp.id,
             pair_id,
             aerp.message_id,
@@ -532,4 +528,4 @@ async def test_caching_fetched_active_pairs(pool, aio_benchmark):
     @aio_benchmark
     async def _benchmarks():
         for _ in range(1000):
-            await fetch_all_active_pairs_by_message(pool, aerp_mock[0].message_id, GUILD_ID)
+            await fetch_all_active_pairs_by_message(database, aerp_mock[0].message_id, GUILD_ID)

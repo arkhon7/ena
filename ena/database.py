@@ -1,97 +1,111 @@
 import asyncpg
 
 import logging
-import lightbulb as lb
-import typing as t
 
-from ena.cache import set, get, evict
+import typing as t
+import hikari as hk
+import lightbulb as lb
+
+from contextlib import asynccontextmanager
 
 
 logging = logging.getLogger(__name__)  # type:ignore
 
 
-async def _load_database(bot: lb.BotApp, dsn: str = None, schema_path: str = None):
+class EnaDatabase:
+    def __init__(self, dsn: str, schema: str) -> None:
+        self._pool: t.Optional[asyncpg.Pool] = None
+        self._schema = schema
+        self._dsn = dsn
 
-    pool: asyncpg.Pool = await asyncpg.create_pool(dsn=dsn)
+    def initialize(self, bot: lb.BotApp):
+        async def _(_: hk.StartedEvent):
 
-    await initialize_schema(pool, schema_path)
+            logging.info("initializing...")
 
-    bot.d.POOL = pool
+            await self.connect()
+            await self.create_schema()
+            await self.initialize_guilds(bot.default_enabled_guilds)
 
-    logging.info("pool name is set into 'POOL'")
+            logging.info("done initializing.")
 
+        return _
 
-async def initialize_schema(pool: asyncpg.Pool, schema_path: str = None):
-    conn: asyncpg.Connection
+    async def initialize_guilds(self, guilds: t.Sequence[int]):
+        for guild_id in guilds:
+            await self.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", guild_id)
+            logging.info(f"initialized default guild id '{guild_id}'")
 
-    if schema_path:
-        logging.info(f"given schema path '{schema_path}'.")
+        logging.info("done initializing guilds")
 
-        async with pool.acquire() as conn:
+    @asynccontextmanager
+    async def acquire(self) -> t.AsyncIterator[asyncpg.Connection]:
+
+        if not self._pool:
+
+            raise Exception("database not connected.")
+
+        async with self._pool.acquire() as conn:
+            yield conn
+
+    async def connect(self):
+
+        self._pool = await asyncpg.create_pool(self._dsn)
+
+        logging.info(f"created pool connection '{self._pool}'")
+
+    async def create_schema(self):
+
+        async with self.acquire() as conn:
             try:
-                with open(schema_path, "r") as schema:
+                with open(self._schema, "r") as schema:
                     await conn.execute(schema.read())
-                    logging.info(f"done creating schema from '{schema_path}' with '{conn}'.")
+                    logging.info(f"done creating schema from '{self._schema}' with '{conn}'.")
 
             except FileNotFoundError:
-                logging.warn(f"failed schema execution, schema is not found from '{schema_path}'.")
+                logging.warn(f"failed schema execution, schema is not found from '{self._schema}'.")
 
-    else:
-        logging.info("no schema path given, so no schema created.")
+    async def fetch(
+        self,
+        query: str,
+        *args,
+        timeout: t.Optional[float] = None,
+        record_class: t.Optional[asyncpg.Record] = None,
+    ):
 
+        async with self.acquire() as conn:
+            records = await conn.fetch(
+                query,
+                *args,
+                timeout=timeout,
+                record_class=record_class,
+            )
 
-# functions
-async def fetch(pool: asyncpg.Pool, query: str, *args, cache_key: str = None, timeout=None) -> t.List[asyncpg.Record]:
-    conn: asyncpg.Connection
-
-    if cache_key:
-        cached: t.List[asyncpg.Record] = await get(cache_key)
-        if cached:
-
-            return cached
-
-        else:
-            async with pool.acquire() as conn:
-                records = await conn.fetch(query, *args, timeout=timeout)
-                await set(cache_key, records)
-
-                return records
-
-    else:
-        async with pool.acquire() as conn:
-            records = await conn.fetch(query, *args, timeout=timeout)
             return records
 
+    async def fetchrow(
+        self,
+        query: str,
+        *args,
+        timeout: t.Optional[float] = None,
+        record_class: t.Optional[asyncpg.Record] = None,
+    ):
 
-async def fetchrow(pool: asyncpg.Pool, query: str, *args, cache_key: str = None, timeout=None) -> asyncpg.Record:
-    conn: asyncpg.Connection
-
-    if cache_key:
-        cached: t.List[asyncpg.Record] = await get(cache_key)
-
-        if cached:
-            return cached
-
-        else:
-            async with pool.acquire() as conn:
-                record = await conn.fetchrow(query, *args, timeout=timeout)
-                await set(cache_key, record)
-
-                return record
-    else:
-        async with pool.acquire() as conn:
-            record = await conn.fetchrow(query, *args, timeout=timeout)
+        async with self.acquire() as conn:
+            record = await conn.fetchrow(
+                query,
+                *args,
+                timeout=timeout,
+                record_class=record_class,
+            )
 
             return record
 
+    async def execute(self, query: str, *args, timeout=None):
 
-async def execute(pool: asyncpg.Pool, query: str, *args, timeout=None, evict_keys: t.List[str] = None) -> None:
-    conn: asyncpg.Connection
-
-    async with pool.acquire() as conn:
-        await conn.execute(query, *args, timeout=timeout)
-
-        if evict_keys:
-
-            for key in evict_keys:
-                await evict(key)
+        async with self.acquire() as conn:
+            await conn.execute(
+                query,
+                *args,
+                timeout=timeout,
+            )

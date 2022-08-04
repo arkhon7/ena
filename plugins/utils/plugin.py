@@ -4,7 +4,7 @@ import hikari as hk
 
 from .models import EmbedBuilder
 
-plugin = lb.Plugin("suggest-plugin")
+plugin = lb.Plugin("utility-plugin")
 
 
 @plugin.command
@@ -24,12 +24,13 @@ async def create_command():
 @lb.option("thumbnail", "thumbnail of the embed", hk.OptionType.ATTACHMENT, required=False)
 @lb.option("thumbnail_url", "thumbnail url of the embed", required=False)
 @lb.option(
-    "anonymous",
-    "whether or not the embed will display the user or not",
+    "show_author",
+    "whether or not the embed will display the author of the embed",
     hk.OptionType.BOOLEAN,
     required=False,
-    default=False,
+    default=True,
 )
+@lb.option("channel", "channel to send the embed", hk.OptionType.CHANNEL, required=False)
 @lb.command("embed", "create an embed")
 @lb.implements(lb.SlashSubCommand)
 async def _create_embed(ctx: lb.SlashContext):
@@ -44,6 +45,7 @@ async def _create_embed(ctx: lb.SlashContext):
         builder.add_title(title)
 
     if description := ctx.options.description:
+        print(description)
         builder.add_description(description)
 
     if color := ctx.options.color:
@@ -67,20 +69,20 @@ async def _create_embed(ctx: lb.SlashContext):
 
     if (embed := builder.build()) is not None:
 
-        anonymous = ctx.options.anonymous
+        channel: hk.GuildChannel
 
-        if not anonymous:
+        if ctx.options.show_author:
 
             embed.set_footer(
                 text=f"by {ctx.user.username}#{ctx.user.discriminator}",
                 icon=ctx.user.avatar_url,
             )
 
-        # @lb.option("channel", "channel to send the embed", hk.OptionType.CHANNEL, required=False) TODO
-        # if channel:
+        if channel := ctx.options.channel:
+            await ctx.bot.rest.create_message(channel.id, embed=embed)
 
-        #     await ctx.bot.rest.create_message(channel.id)
-        await ctx.respond(embed=embed)
+        else:
+            await ctx.bot.rest.create_message(ctx.channel_id, embed=embed)
 
     else:
-        await ctx.respond("Please put at least one info in the embed!")
+        await ctx.respond("Please put at least one info in the embed!", flags=hk.MessageFlag.EPHEMERAL)

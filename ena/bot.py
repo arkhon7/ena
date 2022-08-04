@@ -6,10 +6,8 @@ import logging
 import hikari
 import lightbulb as lb
 
-
-from ena.config import load_plugins
-from ena.config import load_database
-from ena.config import load_listeners
+from ena.decors import mount_database
+from ena.decors import mount_plugins
 
 dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
@@ -27,12 +25,22 @@ INTENTS = (
     | hikari.Intents.GUILDS
 )
 
-DEFAULT_GUILDS = (957116703374979093,)
+DEFAULT_GUILDS = (957116703374979093, 938374580244979764)
+DSN = os.getenv("DB_STRING") or "NONE"
+SCHEMA = "db/schema.psql"
 
 
-@load_listeners
-@load_plugins
-@load_database
+@mount_plugins(
+    plugins=[
+        "plugins.debug",
+        "plugins.greet",
+        "plugins.react_role",
+    ]
+)
+@mount_database(
+    dsn=DSN,
+    schema=SCHEMA,
+)
 def build_bot() -> lb.BotApp:
 
     bot = lb.BotApp(

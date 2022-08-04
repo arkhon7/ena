@@ -1,6 +1,7 @@
-import asyncpg
 import hikari
 import lightbulb as lb
+
+from ena.database import EnaDatabase
 
 
 from .controller import add_active_pair
@@ -40,7 +41,7 @@ async def react_role():
 @lb.implements(lb.SlashSubCommand)
 async def _create_pair(ctx: lb.SlashContext):
 
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     role: hikari.Role = ctx.options.role
     emoji_id: int = int(ctx.options.emoji_id)
     emoji_name: str = ctx.options.emoji_name
@@ -52,7 +53,7 @@ async def _create_pair(ctx: lb.SlashContext):
     if guild_id:
 
         await add_pair(
-            pool,
+            database,
             id,
             role.id,
             emoji_id,
@@ -69,11 +70,11 @@ async def _create_pair(ctx: lb.SlashContext):
 @lb.command("delete_pair", "delete an emoji-role pair from your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _delete_pair(ctx: lb.SlashContext):
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     id: str = ctx.options.id
 
     if guild_id := ctx.guild_id:
-        await delete_pair(pool, id, guild_id)
+        await delete_pair(database, id, guild_id)
 
         await ctx.respond(f"Successfully deleted reaction role! **pair_id**:`{id}`")
 
@@ -83,13 +84,13 @@ async def _delete_pair(ctx: lb.SlashContext):
 @lb.command("info", "get the info of a emoji-role pair", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _info_pair(ctx: lb.SlashContext):
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     id: str = ctx.options.id
 
     guild_id = ctx.guild_id
 
     if guild_id:
-        record = await fetch_pair(pool, id, guild_id)
+        record = await fetch_pair(database, id, guild_id)
 
         if record:
             emoji_role_pair = EmojiRolePair.from_dict(record)
@@ -116,12 +117,12 @@ async def _info_pair(ctx: lb.SlashContext):
 @lb.command("all_pairs", "get all emoji-role pairs from your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _all_pairs(ctx: lb.SlashContext):
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
 
     guild_id = ctx.guild_id
 
     if guild_id:
-        records = await fetch_all_pairs(pool, guild_id)
+        records = await fetch_all_pairs(database, guild_id)
 
         if records:
             pairs = [EmojiRolePair.from_dict(record) for record in records]
@@ -131,7 +132,7 @@ async def _all_pairs(ctx: lb.SlashContext):
             for i, pair in enumerate(pairs):
                 emoji = create_emoji_code(pair.emoji_id, pair.emoji_name, pair.is_animated)
                 role = f"<@&{pair.role_id}>"
-                pages.add_line(f"{i} id:`{pair.id}`\nemoji:{emoji}\nrole:{role}")
+                pages.add_line(f"{i}. id:`{pair.id}` :: {emoji} :: {role}")
 
             navigator = lb.utils.nav.ButtonNavigator(pages.build_pages())
 
@@ -145,7 +146,7 @@ async def _all_pairs(ctx: lb.SlashContext):
 @lb.command("mount", "mount an emoji-role pair to your message", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _mount_pair_to_message(ctx: lb.SlashContext):
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     pair_id: str = ctx.options.id
     link = ctx.options.link
     guild_id = ctx.guild_id
@@ -153,7 +154,7 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
     message = parse_message_from_link(link)
 
     if guild_id:
-        record = await fetch_pair(pool, pair_id, guild_id)
+        record = await fetch_pair(database, pair_id, guild_id)
 
         if record:
 
@@ -163,7 +164,7 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
             id = create_hash(pair.role_id, pair.emoji_name, message.message_id)
 
             await add_active_pair(
-                pool,
+                database,
                 id,
                 pair.id,
                 message.message_id,
@@ -187,7 +188,7 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
 @lb.command("unmount", "unmount an emoji-role pair from a message", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _unmount_pair_to_message(ctx: lb.SlashContext):
-    pool: asyncpg.Pool = ctx.bot.d.POOL
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     pair_id: str = ctx.options.id
     link = ctx.options.link
     guild_id = ctx.guild_id
@@ -195,13 +196,13 @@ async def _unmount_pair_to_message(ctx: lb.SlashContext):
     message = parse_message_from_link(link)
 
     if guild_id:
-        record = await fetch_pair(pool, pair_id, guild_id)
+        record = await fetch_pair(database, pair_id, guild_id)
         if record:
             pair = EmojiRolePair.from_dict(record)
             # new active pair
             id = create_hash(pair.role_id, pair.emoji_name, message.message_id)
             await delete_active_pair(
-                pool,
+                database,
                 id,
                 message.message_id,
                 message.channel_id,
@@ -214,25 +215,37 @@ async def _unmount_pair_to_message(ctx: lb.SlashContext):
 # LISTENERS
 @plugin.listener(hikari.GuildReactionAddEvent)
 async def _handle_add_reaction(event: hikari.GuildReactionAddEvent):
-    pool: asyncpg.Pool = plugin.bot.d.POOL
+    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
 
     if app := plugin.bot.application:
         if event.user_id != app.id:
-            records = await fetch_all_active_pairs_by_message(pool, event.message_id, event.guild_id)
+            records = await fetch_all_active_pairs_by_message(
+                database,
+                event.message_id,
+                event.guild_id,
+            )
 
             if records:
                 active_pairs = [ActiveEmojiRolePair.from_dict(record) for record in records]
 
                 for active_pair in active_pairs:
                     if active_pair.emoji_name == event.emoji_name and active_pair.message_id == event.message_id:
-                        await plugin.bot.rest.add_role_to_member(event.guild_id, event.user_id, active_pair.role_id)
+                        await plugin.bot.rest.add_role_to_member(
+                            event.guild_id,
+                            event.user_id,
+                            active_pair.role_id,
+                        )
 
 
 @plugin.listener(hikari.GuildReactionDeleteEvent)
 async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
-    pool: asyncpg.Pool = plugin.bot.d.POOL
+    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
 
-    records = await fetch_all_active_pairs_by_message(pool, event.message_id, event.guild_id)
+    records = await fetch_all_active_pairs_by_message(
+        database,
+        event.message_id,
+        event.guild_id,
+    )
 
     if records:
 
@@ -240,11 +253,32 @@ async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
 
         for active_pair in active_pairs:
             if active_pair.emoji_name == event.emoji_name and active_pair.message_id == event.message_id:
-                await plugin.bot.rest.remove_role_from_member(event.guild_id, event.user_id, active_pair.role_id)
+                await plugin.bot.rest.remove_role_from_member(
+                    event.guild_id,
+                    event.user_id,
+                    active_pair.role_id,
+                )
 
 
 @plugin.listener(hikari.GuildMessageDeleteEvent)
 async def _handle_delete_message(event: hikari.GuildMessageDeleteEvent):
-    pool: asyncpg.Pool = plugin.bot.d.POOL
+    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
 
-    await delete_all_active_pairs_by_message(pool, event.message_id, event.channel_id, event.guild_id)
+    await delete_all_active_pairs_by_message(
+        database,
+        event.message_id,
+        event.channel_id,
+        event.guild_id,
+    )
+
+
+@plugin.listener(hikari.GuildReactionDeleteAllEvent)
+async def _handle_delete_all_reaction(event: hikari.GuildReactionDeleteAllEvent):
+    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
+
+    await delete_all_active_pairs_by_message(
+        database,
+        event.message_id,
+        event.channel_id,
+        event.guild_id,
+    )

@@ -7,7 +7,7 @@ authors = ["arkhon7 <reviuy9@gmail.com>"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 log_cli = true
-usefixtures = "setup_method"
+
 
 [tool.black]
 line-length = 120

@@ -9,7 +9,6 @@ class EmojiRolePair:
     emoji_id: int
     emoji_name: str
     is_animated: bool
-
     guild_id: int
 
     @staticmethod
