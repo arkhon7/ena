@@ -3,32 +3,29 @@ import logging
 import typing as t
 import aiocache
 
+from aiocache.serializers import BaseSerializer
+from aiocache.plugins import BasePlugin
 
-T = t.TypeVar("T")
-
-
-_CACHE = aiocache.Cache()
 logging = logging.getLogger(__name__)  # type: ignore
 
 
-async def set(key: str, value: T, ttl=60) -> None:
-    await _CACHE.set(key=key, value=value, ttl=ttl)
+class EnaCache(aiocache.Cache.MEMORY):
+    def __init__(
+        self,
+        serializer: t.Optional[BaseSerializer] = None,
+        plugins: t.Optional[t.List[BasePlugin]] = None,
+        namespace: t.Optional[str] = None,
+        timeout: t.Union[int, float] = 5,
+    ) -> None:
 
+        super().__init__(
+            serializer=serializer,
+            plugins=plugins,
+            namespace=namespace,
+            timeout=timeout,
+        )
 
-async def get(key: str) -> T:
-    value: T = await _CACHE.get(key=key)
-    return value
-
-
-async def clear_all():
-    await _CACHE.clear()
-
-
-async def evict(key: str):
-    await _CACHE.delete(key)
-
-
-def create_cache_key(*args) -> str:
-
-    key = ":".join([f"{arg}" for arg in args])
-    return key
+    @staticmethod
+    def create_cache_key(*args) -> str:
+        key = ":".join([f"{arg}" for arg in args])
+        return key

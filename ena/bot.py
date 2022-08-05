@@ -3,9 +3,14 @@ import dotenv
 import logging
 
 
-import hikari
+import hikari as hk
 import lightbulb as lb
 
+
+from aiocache.plugins import HitMissRatioPlugin
+from aiocache.plugins import TimingPlugin
+
+from ena.decors import mount_cache, mount_listeners
 from ena.decors import mount_database
 from ena.decors import mount_plugins
 
@@ -15,21 +20,47 @@ logging.basicConfig(level=logging.DEBUG)
 
 TOKEN = os.getenv("TOKEN") or "NONE"
 
-
-INTENTS = (
-    hikari.Intents.ALL_PRIVILEGED
-    | hikari.Intents.DM_MESSAGE_REACTIONS
-    | hikari.Intents.GUILD_MESSAGE_REACTIONS
-    | hikari.Intents.GUILD_MESSAGES
-    | hikari.Intents.GUILD_MEMBERS
-    | hikari.Intents.GUILDS
-)
-
-DEFAULT_GUILDS = (957116703374979093, 938374580244979764)
 DSN = os.getenv("DB_STRING") or "NONE"
 SCHEMA = "db/schema.psql"
 
+DEFAULT_GUILDS = (957116703374979093, 938374580244979764)
 
+INTENTS = (
+    hk.Intents.ALL_PRIVILEGED
+    | hk.Intents.DM_MESSAGE_REACTIONS
+    | hk.Intents.GUILD_MESSAGE_REACTIONS
+    | hk.Intents.GUILD_MESSAGES
+    | hk.Intents.GUILD_MEMBERS
+    | hk.Intents.GUILDS
+)
+
+
+def load_presence(bot: lb.BotApp):
+    async def _load_presence(_: hk.StartedEvent):
+
+        await bot.update_presence(
+            status=hk.Status.ONLINE,
+            activity=hk.Activity(
+                name="/help",
+                type=hk.ActivityType.LISTENING,
+            ),
+        )
+
+    return _load_presence
+
+
+@mount_listeners(
+    listeners=[
+        {"event_type": hk.StartedEvent, "callback": load_presence},
+    ],
+)
+@mount_cache(
+    plugins=[
+        HitMissRatioPlugin(),
+        TimingPlugin(),
+    ],
+    namespace="enabot:",
+)
 @mount_plugins(
     plugins=[
         "plugins.debug",

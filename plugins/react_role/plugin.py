@@ -1,5 +1,6 @@
 import hikari
 import lightbulb as lb
+from ena.cache import EnaCache
 
 from ena.database import EnaDatabase
 
@@ -40,6 +41,9 @@ async def react_role():
 @lb.command("create_pair", "create an emoji-role pair for reaction roles in your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _create_pair(ctx: lb.SlashContext):
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
+
+    cache.hit_miss_ratio
 
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     role: hikari.Role = ctx.options.role

@@ -13,31 +13,48 @@ logging = logging.getLogger(__name__)  # type:ignore
 
 
 class EnaDatabase:
-    def __init__(self, dsn: str, schema: str) -> None:
+    def __init__(self, dsn: str, schema: t.Optional[str] = None) -> None:
         self._pool: t.Optional[asyncpg.Pool] = None
-        self._schema = schema
-        self._dsn = dsn
+        self._schema: t.Optional[str] = schema
+        self._dsn: str = dsn
 
-    def initialize(self, bot: lb.BotApp):
-        async def _(_: hk.StartedEvent):
+    # bot listeners
+    def _on_start(self, bot: lb.BotApp):
+        async def _callback(_: hk.StartedEvent):
 
             logging.info("initializing...")
 
             await self.connect()
             await self.create_schema()
-            await self.initialize_guilds(bot.default_enabled_guilds)
+            await self.insert_default_guild_ids(bot.default_enabled_guilds)
 
-            logging.info("done initializing.")
+        return _callback
 
-        return _
+    def _on_guild_join(self, bot: lb.BotApp):
+        async def _callback(event: hk.GuildJoinEvent):
+            guild_id = event.guild_id
+            await self.execute("INSERT INTO guilds VALUES ($1)", guild_id)
+            logging.info("added guild '{}'".format(guild_id))
 
-    async def initialize_guilds(self, guilds: t.Sequence[int]):
+        return _callback
+
+    def _on_guild_leave(self, bot: lb.BotApp):
+        async def _callback(event: hk.GuildLeaveEvent):
+            guild_id = event.guild_id
+
+            await self.execute("DELETE FROM guilds WHERE id = $1", guild_id)
+            logging.info("removed guild '{}'".format(guild_id))
+
+        return _callback
+
+    async def insert_default_guild_ids(self, guilds: t.Sequence[int]):
         for guild_id in guilds:
             await self.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", guild_id)
-            logging.info(f"initialized default guild id '{guild_id}'")
+            logging.info("initialized default guild id '{}'".format(guild_id))
 
-        logging.info("done initializing guilds")
+        logging.info("done.")
 
+    # database controls
     @asynccontextmanager
     async def acquire(self) -> t.AsyncIterator[asyncpg.Connection]:
 
@@ -56,14 +73,22 @@ class EnaDatabase:
 
     async def create_schema(self):
 
-        async with self.acquire() as conn:
-            try:
-                with open(self._schema, "r") as schema:
-                    await conn.execute(schema.read())
-                    logging.info(f"done creating schema from '{self._schema}' with '{conn}'.")
+        if self._schema:
+            async with self.acquire() as conn:
+                try:
+                    with open(self._schema, "r") as schema:
+                        await conn.execute(schema.read())
+                        logging.info(
+                            "done creating schema from the given path '{}' with '{}'.".format(self._schema, conn)
+                        )
 
-            except FileNotFoundError:
-                logging.warn(f"failed schema execution, schema is not found from '{self._schema}'.")
+                except FileNotFoundError:
+                    logging.warn(
+                        "failed schema creation, schema is not found from the given path '{}'.".format(self._schema)
+                    )
+
+        else:
+            logging.info("no schema specified, skipping schema creation.")
 
     async def fetch(
         self,
