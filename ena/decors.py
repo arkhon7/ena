@@ -70,9 +70,9 @@ def mount_database(dsn: str, schema: t.Optional[str] = None):
 
             bot = func()
             bot.d.ENA_DATABASE = EnaDatabase(dsn, schema)
-            bot.subscribe(hk.StartedEvent, bot.d.ENA_DATABASE._on_start(bot))
-            bot.subscribe(hk.GuildJoinEvent, bot.d.ENA_DATABASE._on_guild_join(bot))
-            bot.subscribe(hk.GuildLeaveEvent, bot.d.ENA_DATABASE._on_guild_leave(bot))
+            # bot.subscribe(hk.StartedEvent, bot.d.ENA_DATABASE._on_start(bot))
+            # bot.subscribe(hk.GuildJoinEvent, bot.d.ENA_DATABASE._on_guild_join(bot))
+            # bot.subscribe(hk.GuildLeaveEvent, bot.d.ENA_DATABASE._on_guild_leave(bot))
 
             return bot
 

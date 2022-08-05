@@ -4,6 +4,7 @@ import typing as t
 
 @dataclass
 class EmojiRolePair:
+
     id: str
     role_id: int
     emoji_id: int

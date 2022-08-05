@@ -1,10 +1,6 @@
 import asyncpg
-
 import logging
-
 import typing as t
-import hikari as hk
-import lightbulb as lb
 
 from contextlib import asynccontextmanager
 
@@ -18,35 +14,6 @@ class EnaDatabase:
         self._schema: t.Optional[str] = schema
         self._dsn: str = dsn
 
-    # bot listeners
-    def _on_start(self, bot: lb.BotApp):
-        async def _callback(_: hk.StartedEvent):
-
-            logging.info("initializing...")
-
-            await self.connect()
-            await self.create_schema()
-            await self.insert_default_guild_ids(bot.default_enabled_guilds)
-
-        return _callback
-
-    def _on_guild_join(self, bot: lb.BotApp):
-        async def _callback(event: hk.GuildJoinEvent):
-            guild_id = event.guild_id
-            await self.execute("INSERT INTO guilds VALUES ($1)", guild_id)
-            logging.info("added guild '{}'".format(guild_id))
-
-        return _callback
-
-    def _on_guild_leave(self, bot: lb.BotApp):
-        async def _callback(event: hk.GuildLeaveEvent):
-            guild_id = event.guild_id
-
-            await self.execute("DELETE FROM guilds WHERE id = $1", guild_id)
-            logging.info("removed guild '{}'".format(guild_id))
-
-        return _callback
-
     async def insert_default_guild_ids(self, guilds: t.Sequence[int]):
         for guild_id in guilds:
             await self.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", guild_id)
@@ -54,7 +21,6 @@ class EnaDatabase:
 
         logging.info("done.")
 
-    # database controls
     @asynccontextmanager
     async def acquire(self) -> t.AsyncIterator[asyncpg.Connection]:
 

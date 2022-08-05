@@ -10,7 +10,6 @@ from ena.bot import DSN, SCHEMA
 from ena.database import EnaDatabase
 
 from ena.helpers import create_hash, parse_message_from_link
-from ena.cache import clear_all
 
 from plugins.react_role.models import EmojiRolePair, ActiveEmojiRolePair
 from plugins.react_role.controller import (
@@ -137,7 +136,7 @@ def database(event_loop: asyncio.AbstractEventLoop):
 
         await ena_db.connect()
         await ena_db.create_schema()
-        await ena_db.initialize_guilds((957116703374979093, 938374580244979764))
+        await ena_db.insert_default_guild_ids((957116703374979093, 938374580244979764))
 
         return ena_db
 
