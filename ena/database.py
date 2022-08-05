@@ -19,14 +19,12 @@ class EnaDatabase:
             await self.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", guild_id)
             logging.info("initialized default guild id '{}'".format(guild_id))
 
-        logging.info("done.")
-
     @asynccontextmanager
     async def acquire(self) -> t.AsyncIterator[asyncpg.Connection]:
 
         if not self._pool:
 
-            raise Exception("database not connected.")
+            raise Exception("database not connected")
 
         async with self._pool.acquire() as conn:
             yield conn
@@ -44,17 +42,15 @@ class EnaDatabase:
                 try:
                     with open(self._schema, "r") as schema:
                         await conn.execute(schema.read())
-                        logging.info(
-                            "done creating schema from the given path '{}' with '{}'.".format(self._schema, conn)
-                        )
+                        logging.info("done creating schema from the given path '{}'".format(self._schema))
 
                 except FileNotFoundError:
                     logging.warn(
-                        "failed schema creation, schema is not found from the given path '{}'.".format(self._schema)
+                        "failed schema creation, schema is not found from the given path '{}'".format(self._schema)
                     )
 
         else:
-            logging.info("no schema specified, skipping schema creation.")
+            logging.info("no schema specified, skipping schema creation")
 
     async def fetch(
         self,

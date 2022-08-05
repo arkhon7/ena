@@ -10,11 +10,6 @@ from ena.cache import EnaCache
 from ena.database import EnaDatabase
 
 
-class ListenerT(t.TypedDict):
-    event_type: t.Type[hk.Event]
-    callback: t.Callable[[lb.BotApp], t.Callable[[hk.Event], t.Any]]
-
-
 def mount_plugins(plugins: t.List[str]):
     """
     mounts plugins to the bot
@@ -70,9 +65,6 @@ def mount_database(dsn: str, schema: t.Optional[str] = None):
 
             bot = func()
             bot.d.ENA_DATABASE = EnaDatabase(dsn, schema)
-            # bot.subscribe(hk.StartedEvent, bot.d.ENA_DATABASE._on_start(bot))
-            # bot.subscribe(hk.GuildJoinEvent, bot.d.ENA_DATABASE._on_guild_join(bot))
-            # bot.subscribe(hk.GuildLeaveEvent, bot.d.ENA_DATABASE._on_guild_leave(bot))
 
             return bot
 
@@ -81,7 +73,7 @@ def mount_database(dsn: str, schema: t.Optional[str] = None):
     return _func_wrap
 
 
-def mount_listeners(listeners: t.List[ListenerT]):
+def mount_listeners(listeners: t.List[t.Callable[[lb.BotApp], t.Tuple[hk.Event, t.Callable[[hk.Event], t.Any]]]]):
     """
     mounts custom listeners, this uses `lightbulb.BotApp.subscribe` function.
 
@@ -91,21 +83,22 @@ def mount_listeners(listeners: t.List[ListenerT]):
 
     `listeners: ListenerT`
 
-    A dict containing `'event_type'` and `'callback'` keys. The `'event_type'`
-    is where the `hikari.Event` is specified, and the `'callback'` must be a
-    synchronous method that takes `lightbulb.BotApp` as an argument and must
-    return an async method that takes the `event_type`
+    List of functions that takes the `lightbulb.BotApp` as an argument and returns
+    an event type and a callback
 
     Example
     -------
     ```py
+    # Writing a listener function
     def load_presence(bot: lightbulb.BotApp):
-        async def _listener(event: hikari.StartedEvent)
+        async def _callback(event: hikari.StartedEvent)
             await bot.update_presence(...)
-        return _listener
+        return hk.StartedEvent, _callback
+    ...
 
+    # mounting the listener function to the bot
     @mount_listeners([
-        {"event_type": hikari.StartedEvent, "callback": load_presence}
+        load_presence
     ])
     def build_bot():
         bot = lightbulb.BotApp(...)
@@ -119,7 +112,8 @@ def mount_listeners(listeners: t.List[ListenerT]):
             bot = func()
 
             for listener in listeners:
-                bot.subscribe(listener["event_type"], listener["callback"](bot))
+                event_type, callback = listener(bot)
+                bot.subscribe(event_type, callback)
 
             return bot
 
