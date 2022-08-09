@@ -28,7 +28,7 @@ TOKEN = os.getenv("TOKEN") or "NONE"
 DSN = os.getenv("DB_STRING") or "NONE"
 SCHEMA = "db/schema.psql"
 
-DEFAULT_GUILDS = (957116703374979093, 938374580244979764)
+DEFAULT_GUILDS = (957116703374979093, 938374580244979764, 938346141723033600)
 
 INTENTS = (
     hk.Intents.ALL_PRIVILEGED
@@ -51,6 +51,7 @@ cache = mount_cache(
 extensions = mount_plugins(
     plugins=[
         "plugins.debug",
+        "plugins.utils",
         "plugins.greet",
         "plugins.react_role",
     ]

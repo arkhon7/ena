@@ -10,6 +10,10 @@ logging = logging.getLogger(__name__)  # type:ignore
 
 
 # cache identifiers
+class EmojiRolePairCache(t.TypedDict):
+    ids: t.Dict[str, asyncpg.Record]
+    by_message: t.Dict[int, t.List[asyncpg.Record]]
+    by_guild: t.List[asyncpg.Record]
 
 
 async def fetch_all_pairs(database: EnaDatabase, cache: EnaCache, guild_id: int) -> t.Optional[t.List[asyncpg.Record]]:
@@ -20,9 +24,34 @@ async def fetch_all_pairs(database: EnaDatabase, cache: EnaCache, guild_id: int)
     WHERE guild_id = $1
     """
 
-    records = await database.fetch(query, guild_id, timeout=5)
+    key = "{}:erp".format(guild_id)
+    cached_slice: EmojiRolePairCache = await cache.get(key)
 
-    return records
+    if cached_slice:
+        cached: t.List[asyncpg.Record] = cached_slice["by_guild"]
+
+        if len(cached) != 0:
+            return cached
+
+        else:
+            # cache if slice found but role pairs by guild is empty
+            records = await database.fetch(query, guild_id, timeout=5)
+            cached_slice["by_guild"] = records
+
+            await cache.set(key, value=cached_slice)
+            #
+
+            return records
+
+    else:
+        records = await database.fetch(query, guild_id, timeout=5)
+
+        # cache if no slice found
+        slice: EmojiRolePairCache = {"ids": {}, "by_message": {}, "by_guild": records}
+        await cache.set(key, value=slice)
+        #
+
+        return records
 
 
 async def fetch_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: int) -> t.Optional[asyncpg.Record]:
