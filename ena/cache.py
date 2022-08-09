@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import logging
-
 import typing as t
-import aiocache
 
-from aiocache.serializers import BaseSerializer
+from aiocache import Cache
 from aiocache.plugins import BasePlugin
+from aiocache.serializers import BaseSerializer
+
 
 logging = logging.getLogger(__name__)  # type: ignore
 
 
-class EnaCache(aiocache.Cache.MEMORY):
+class EnaCache(Cache.MEMORY):
     def __init__(
         self,
         serializer: t.Optional[BaseSerializer] = None,
@@ -29,3 +31,12 @@ class EnaCache(aiocache.Cache.MEMORY):
     def create_cache_key(*args) -> str:
         key = ":".join([f"{arg}" for arg in args])
         return key
+
+
+class EnaCacheHandler:
+    def __init__(self, cache: EnaCache) -> None:
+        self.cache: EnaCache = cache
+
+    async def set(self, key: t.Any, value: t.Any) -> None:
+
+        ...
