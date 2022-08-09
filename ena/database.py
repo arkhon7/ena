@@ -14,6 +14,7 @@ class EnaDatabase:
         self._schema: t.Optional[str] = schema
         self._dsn: str = dsn
 
+    # event methods
     async def insert_default_guild_ids(self, guilds: t.Sequence[int]):
         for guild_id in guilds:
             await self.execute("INSERT INTO guilds VALUES ($1) ON CONFLICT DO NOTHING", guild_id)
@@ -52,6 +53,7 @@ class EnaDatabase:
         else:
             logging.info("no schema specified, skipping schema creation")
 
+    # database queries
     async def fetch(
         self,
         query: str,

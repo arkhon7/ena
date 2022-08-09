@@ -492,6 +492,18 @@ elasticsearch = ["elasticsearch"]
 histogram = ["pygal", "pygaljs"]
 
 [[package]]
+name = "pytest-catchlog"
+version = "1.2.2"
+description = "py.test plugin to catch log messages. This is a fork of pytest-capturelog."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+py = ">=1.1.1"
+pytest = ">=2.6"
+
+[[package]]
 name = "python-dotenv"
 version = "0.19.2"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -546,6 +558,14 @@ optional = false
 python-versions = ">=3.6,<4.0"
 
 [[package]]
+name = "types-cachetools"
+version = "5.2.1"
+description = "Typing stubs for cachetools"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "typing-extensions"
 version = "4.3.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -576,7 +596,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9.6"
-content-hash = "e4631bfa87cf980749485646ae2236981c1fb588078c5473b2bc8059a8a9b7c3"
+content-hash = "f462d6084f1495f6473fe31d724e68b90c5252d7c61af1cce0b9956917d6dd14"
 
 [metadata.files]
 aiocache = []
@@ -659,6 +679,7 @@ pyparsing = [
 pytest = []
 pytest-asyncio = []
 pytest-benchmark = []
+pytest-catchlog = []
 python-dotenv = []
 simpleeval = [
     {file = "simpleeval-0.9.12-py2.py3-none-any.whl", hash = "sha256:d82faa7dc88379614ea3b385fd84cc24f0aa4853432e267718526e5aeac6b1b9"},
@@ -671,6 +692,7 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 tomlkit = []
+types-cachetools = []
 typing-extensions = []
 wrapt = []
 yarl = []

@@ -3,11 +3,16 @@ import typing as t
 import logging
 
 from ena.database import EnaDatabase
+from ena.cache import EnaCache
+
 
 logging = logging.getLogger(__name__)  # type:ignore
 
 
-async def fetch_all_pairs(database: EnaDatabase, guild_id: int) -> t.Optional[t.List[asyncpg.Record]]:
+# cache identifiers
+
+
+async def fetch_all_pairs(database: EnaDatabase, cache: EnaCache, guild_id: int) -> t.Optional[t.List[asyncpg.Record]]:
 
     query = """
     SELECT *
@@ -15,15 +20,12 @@ async def fetch_all_pairs(database: EnaDatabase, guild_id: int) -> t.Optional[t.
     WHERE guild_id = $1
     """
 
-    records = await database.fetch(
-        query,
-        guild_id,
-        timeout=5,
-    )
+    records = await database.fetch(query, guild_id, timeout=5)
+
     return records
 
 
-async def fetch_pair(database: EnaDatabase, id: str, guild_id: int) -> t.Optional[asyncpg.Record]:
+async def fetch_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: int) -> t.Optional[asyncpg.Record]:
     query = """
     SELECT *
     FROM emoji_role_pairs
@@ -31,18 +33,14 @@ async def fetch_pair(database: EnaDatabase, id: str, guild_id: int) -> t.Optiona
     AND guild_id = $2
     """
 
-    record = await database.fetchrow(
-        query,
-        id,
-        guild_id,
-        timeout=5,
-    )
+    record = await database.fetchrow(query, id, guild_id, timeout=5)
 
     return record
 
 
 async def add_pair(
     database: EnaDatabase,
+    cache: EnaCache,
     id: str,
     role_id: int,
     emoji_id: int,
@@ -68,7 +66,7 @@ async def add_pair(
     )
 
 
-async def delete_pair(database: EnaDatabase, id: str, guild_id: int):
+async def delete_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: int):
     query = """
     DELETE FROM emoji_role_pairs
     WHERE id = $1
@@ -84,7 +82,7 @@ async def delete_pair(database: EnaDatabase, id: str, guild_id: int):
 
 
 # active emoji role pairs table
-async def fetch_all_active_pairs_by_message(database: EnaDatabase, message_id: int, guild_id: int):
+async def fetch_all_active_pairs_by_message(database: EnaDatabase, cache: EnaCache, message_id: int, guild_id: int):
 
     query = """
     SELECT
@@ -114,6 +112,7 @@ async def fetch_all_active_pairs_by_message(database: EnaDatabase, message_id: i
 
 async def add_active_pair(
     database: EnaDatabase,
+    cache: EnaCache,
     id: str,
     pair_id: str,
     message_id: int,
@@ -139,6 +138,7 @@ async def add_active_pair(
 
 async def delete_active_pair(
     database: EnaDatabase,
+    cache: EnaCache,
     id: str,
     message_id: int,
     channel_id: int,
@@ -164,6 +164,7 @@ async def delete_active_pair(
 
 async def delete_all_active_pairs_by_message(
     database: EnaDatabase,
+    cache: EnaCache,
     message_id: int,
     channel_id: int,
     guild_id: int,
@@ -182,3 +183,6 @@ async def delete_all_active_pairs_by_message(
         guild_id,
         timeout=5,
     )
+
+
+# TODO implement a cache struct

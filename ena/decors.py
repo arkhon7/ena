@@ -157,6 +157,7 @@ def mount_cache(
         def _():
 
             bot = func()
+
             bot.d.ENA_CACHE = Cache(
                 cache_class=EnaCache,
                 serializer=serializer,

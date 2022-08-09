@@ -41,11 +41,9 @@ async def react_role():
 @lb.command("create_pair", "create an emoji-role pair for reaction roles in your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _create_pair(ctx: lb.SlashContext):
+    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     cache: EnaCache = ctx.bot.d.ENA_CACHE
 
-    cache.hit_miss_ratio
-
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
     role: hikari.Role = ctx.options.role
     emoji_id: int = int(ctx.options.emoji_id)
     emoji_name: str = ctx.options.emoji_name
@@ -58,6 +56,7 @@ async def _create_pair(ctx: lb.SlashContext):
 
         await add_pair(
             database,
+            cache,
             id,
             role.id,
             emoji_id,
@@ -75,10 +74,11 @@ async def _create_pair(ctx: lb.SlashContext):
 @lb.implements(lb.SlashSubCommand)
 async def _delete_pair(ctx: lb.SlashContext):
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
     id: str = ctx.options.id
 
     if guild_id := ctx.guild_id:
-        await delete_pair(database, id, guild_id)
+        await delete_pair(database, cache, id, guild_id)
 
         await ctx.respond(f"Successfully deleted reaction role! **pair_id**:`{id}`")
 
@@ -89,12 +89,13 @@ async def _delete_pair(ctx: lb.SlashContext):
 @lb.implements(lb.SlashSubCommand)
 async def _info_pair(ctx: lb.SlashContext):
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
     id: str = ctx.options.id
 
     guild_id = ctx.guild_id
 
     if guild_id:
-        record = await fetch_pair(database, id, guild_id)
+        record = await fetch_pair(database, cache, id, guild_id)
 
         if record:
             emoji_role_pair = EmojiRolePair.from_dict(record)
@@ -122,11 +123,12 @@ async def _info_pair(ctx: lb.SlashContext):
 @lb.implements(lb.SlashSubCommand)
 async def _all_pairs(ctx: lb.SlashContext):
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
 
     guild_id = ctx.guild_id
 
     if guild_id:
-        records = await fetch_all_pairs(database, guild_id)
+        records = await fetch_all_pairs(database, cache, guild_id)
 
         if records:
             pairs = [EmojiRolePair.from_dict(record) for record in records]
@@ -151,6 +153,8 @@ async def _all_pairs(ctx: lb.SlashContext):
 @lb.implements(lb.SlashSubCommand)
 async def _mount_pair_to_message(ctx: lb.SlashContext):
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
+
     pair_id: str = ctx.options.id
     link = ctx.options.link
     guild_id = ctx.guild_id
@@ -158,7 +162,7 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
     message = parse_message_from_link(link)
 
     if guild_id:
-        record = await fetch_pair(database, pair_id, guild_id)
+        record = await fetch_pair(database, cache, pair_id, guild_id)
 
         if record:
 
@@ -169,6 +173,7 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
 
             await add_active_pair(
                 database,
+                cache,
                 id,
                 pair.id,
                 message.message_id,
@@ -193,6 +198,8 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
 @lb.implements(lb.SlashSubCommand)
 async def _unmount_pair_to_message(ctx: lb.SlashContext):
     database: EnaDatabase = ctx.bot.d.ENA_DATABASE
+    cache: EnaCache = ctx.bot.d.ENA_CACHE
+
     pair_id: str = ctx.options.id
     link = ctx.options.link
     guild_id = ctx.guild_id
@@ -200,13 +207,14 @@ async def _unmount_pair_to_message(ctx: lb.SlashContext):
     message = parse_message_from_link(link)
 
     if guild_id:
-        record = await fetch_pair(database, pair_id, guild_id)
+        record = await fetch_pair(database, cache, pair_id, guild_id)
         if record:
             pair = EmojiRolePair.from_dict(record)
             # new active pair
             id = create_hash(pair.role_id, pair.emoji_name, message.message_id)
             await delete_active_pair(
                 database,
+                cache,
                 id,
                 message.message_id,
                 message.channel_id,
@@ -220,11 +228,13 @@ async def _unmount_pair_to_message(ctx: lb.SlashContext):
 @plugin.listener(hikari.GuildReactionAddEvent)
 async def _handle_add_reaction(event: hikari.GuildReactionAddEvent):
     database: EnaDatabase = plugin.bot.d.ENA_DATABASE
+    cache: EnaCache = plugin.bot.d.ENA_CACHE
 
     if app := plugin.bot.application:
         if event.user_id != app.id:
             records = await fetch_all_active_pairs_by_message(
                 database,
+                cache,
                 event.message_id,
                 event.guild_id,
             )
@@ -244,9 +254,11 @@ async def _handle_add_reaction(event: hikari.GuildReactionAddEvent):
 @plugin.listener(hikari.GuildReactionDeleteEvent)
 async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
     database: EnaDatabase = plugin.bot.d.ENA_DATABASE
+    cache: EnaCache = plugin.bot.d.ENA_CACHE
 
     records = await fetch_all_active_pairs_by_message(
         database,
+        cache,
         event.message_id,
         event.guild_id,
     )
@@ -267,9 +279,10 @@ async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
 @plugin.listener(hikari.GuildMessageDeleteEvent)
 async def _handle_delete_message(event: hikari.GuildMessageDeleteEvent):
     database: EnaDatabase = plugin.bot.d.ENA_DATABASE
-
+    cache: EnaCache = plugin.bot.d.ENA_CACHE
     await delete_all_active_pairs_by_message(
         database,
+        cache,
         event.message_id,
         event.channel_id,
         event.guild_id,
@@ -279,9 +292,11 @@ async def _handle_delete_message(event: hikari.GuildMessageDeleteEvent):
 @plugin.listener(hikari.GuildReactionDeleteAllEvent)
 async def _handle_delete_all_reaction(event: hikari.GuildReactionDeleteAllEvent):
     database: EnaDatabase = plugin.bot.d.ENA_DATABASE
+    cache: EnaCache = plugin.bot.d.ENA_CACHE
 
     await delete_all_active_pairs_by_message(
         database,
+        cache,
         event.message_id,
         event.channel_id,
         event.guild_id,
