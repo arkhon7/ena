@@ -32,15 +32,3 @@ class ActiveEmojiRolePair:
     @staticmethod
     def from_dict(data: t.Dict):
         return ActiveEmojiRolePair(**data)
-
-
-# CACHE
-
-
-@dataclass
-class EmojiRolePairCache:
-
-    ids: t.Dict[str, str]
-    by_guild: t.List[t.Any]
-    by_message: t.Dict[int, t.List[t.Any]]
-    by_channel: t.Dict[int, t.List[t.Any]]

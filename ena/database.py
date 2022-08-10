@@ -33,8 +33,11 @@ class EnaDatabase:
     async def connect(self):
 
         self._pool = await asyncpg.create_pool(self._dsn)
+        logging.info("created pool connection '{}'".format(self._pool))
 
-        logging.info(f"created pool connection '{self._pool}'")
+    async def disconnect(self):
+        await self._pool.close()
+        logging.info("closed pool connection '{}'".format(self._pool))
 
     async def create_schema(self):
 

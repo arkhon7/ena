@@ -31,31 +31,3 @@ class EnaCache(Cache.MEMORY):
     def create_cache_key(*args) -> str:
         key = ":".join([f"{arg}" for arg in args])
         return key
-
-
-# class EnaCacheHandler:
-#     def __init__(self, cache: EnaCache) -> None:
-#         self.cache: EnaCache = cache
-
-#     async def set(self, key: t.Any, value: t.Any, ttl: t.Optional[float] = None) -> None:
-
-
-#         await self.cache.set(key, value, ttl)
-
-
-#     async def get(self, key: t.Any, slice_key: t.Optional[t.Any] = None) -> t.Any:
-#         cache_slice: dict = await self.cache.get(key=key)
-
-#         if cache_slice:
-
-#             if cached := cache_slice.get(slice_key):
-
-#                 return cached
-
-#             else:
-
-#                 cache_slice[slice_key] = value
-
-#                 await self.cache.set(key=key, value=cache_slice, ttl=ttl)
-
-#         else:

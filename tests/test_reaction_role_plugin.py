@@ -141,10 +141,6 @@ def database(event_loop: asyncio.AbstractEventLoop):
 
         ena_db = EnaDatabase(dsn=DSN, schema=SCHEMA)
 
-        await ena_db.connect()
-        await ena_db.create_schema()
-        await ena_db.insert_default_guild_ids((957116703374979093, 938374580244979764))
-
         return ena_db
 
     database = event_loop.run_until_complete(get_db())
@@ -157,7 +153,6 @@ def database(event_loop: asyncio.AbstractEventLoop):
 def cache():
 
     ena_cache = aiocache.Cache(cache_class=EnaCache)
-    # ena_cache = {}
 
     return ena_cache
 
@@ -181,16 +176,16 @@ async def aio_benchmark(benchmark, event_loop):
 # TESTS ON REACTION ROLE PLUGIN CONTROLLERS
 
 
-# @pytest.fixture
-# def setup_method(database: EnaDatabase, event_loop):
-#     async def _setup():
+@pytest.fixture
+def setup_method(database: EnaDatabase, event_loop):
+    async def _setup():
+        await database.connect()
+        await database.create_schema()
+        await database.insert_default_guild_ids((957116703374979093, 938374580244979764))
 
-#         await clear_all()
-
-#     event_loop.run_until_complete(_setup())
-#     yield
-
-#     event_loop.run_until_complete(database._pool.close())
+    event_loop.run_until_complete(_setup())
+    yield
+    event_loop.run_until_complete(database.disconnect())
 
 
 @pytest.mark.asyncio
@@ -310,31 +305,6 @@ async def test_delete_pair(database: EnaDatabase, cache: EnaCache):
 
 
 @pytest.mark.asyncio
-async def test_speed_cached(database: EnaDatabase, cache: EnaCache, aio_benchmark, caplog):
-
-    # Insert pair data
-    erp_mock = get_mock_pair_list()
-
-    for erp in erp_mock:
-
-        await add_pair(
-            database,
-            cache,
-            erp.id,
-            erp.role_id,
-            erp.emoji_id,
-            erp.emoji_name,
-            erp.is_animated,
-            erp.guild_id,
-        )
-
-    @aio_benchmark
-    async def _():
-        for _ in range(10000):
-            await fetch_all_pairs(database, cache, GUILD_ID)
-
-
-@pytest.mark.asyncio
 async def test_fetch_all_active_pairs_by_message(database, cache):
     aerp_mock = get_mock_active_pair_list()
     erp_mock = get_mock_pair_list()
@@ -450,6 +420,88 @@ async def test_delete_active_pair(database, cache):
 
     for aerp in aerp_mock:
         await delete_active_pair(database, cache, aerp.id, aerp.message_id, aerp.channel_id, aerp.guild_id)
+
+
+@pytest.mark.asyncio
+async def test_cache_fetch_all_pairs(database: EnaDatabase, cache: EnaCache):
+    erp_mock = get_mock_pair_list()
+
+    # Insert pair data
+    for erp in erp_mock:
+
+        await add_pair(
+            database,
+            cache,
+            erp.id,
+            erp.role_id,
+            erp.emoji_id,
+            erp.emoji_name,
+            erp.is_animated,
+            erp.guild_id,
+        )
+
+    records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(records) == len(erp_mock)
+
+    cached_records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(cached_records) == len(erp_mock)
+
+    sample = erp_mock[0]
+    await delete_pair(database, cache, sample.id, sample.guild_id)
+
+    records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(records) == len(erp_mock) - 1
+
+    cached_records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(cached_records) == len(erp_mock) - 1
+
+    await add_pair(
+        database,
+        cache,
+        sample.id,
+        sample.role_id,
+        sample.emoji_id,
+        sample.emoji_name,
+        sample.is_animated,
+        sample.guild_id,
+    )
+
+    records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(records) == len(erp_mock)
+
+    cached_records = await fetch_all_pairs(database, cache, GUILD_ID)
+
+    assert len(cached_records) == len(erp_mock)
+
+
+@pytest.mark.asyncio
+async def test_speed_cached(database: EnaDatabase, cache: EnaCache, aio_benchmark):
+
+    # Insert pair data
+    erp_mock = get_mock_pair_list()
+
+    for erp in erp_mock:
+
+        await add_pair(
+            database,
+            cache,
+            erp.id,
+            erp.role_id,
+            erp.emoji_id,
+            erp.emoji_name,
+            erp.is_animated,
+            erp.guild_id,
+        )
+
+    @aio_benchmark
+    async def _():
+        for _ in range(100):
+            await fetch_all_pairs(database, cache, GUILD_ID)
 
 
 # @pytest.mark.asyncio

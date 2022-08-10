@@ -14,55 +14,6 @@ async def create_command():
     pass
 
 
-# @create_command.child
-# @lb.option("channel", "channel to send the embed", hk.OptionType.CHANNEL, required=False)
-# @lb.option("render", "whether you want the url to be rendered as image or thumbnail", choices=["thumbnail", "image"])
-# @lb.command("banner_embed", "create an embed with server banner as image")
-# @lb.implements(lb.SlashSubCommand)
-# async def _create_banner_embed(ctx: lb.SlashContext):
-
-#     guild: t.Optional[hk.Guild] = ctx.get_guild()
-
-#     embed = hk.Embed()
-#     if guild:
-
-#         if ctx.options.render == "thumbnail":
-#             embed.set_thumbnail(guild.banner_url)
-
-#         elif ctx.options.render == "thumbnail":
-#             embed.set_image(guild.banner_url)
-
-#     if channel := ctx.options.channel:
-#         await ctx.bot.rest.create_message(channel.id, embed=embed)
-
-#     else:
-#         await ctx.bot.rest.create_message(ctx.channel_id, embed=embed)
-
-
-# @create_command.child
-# @lb.option("channel", "channel to send the embed", hk.OptionType.CHANNEL, required=False)
-# @lb.option("render", "whether you want the url to be rendered as image or thumbnail", choices=["thumbnail", "image"])
-# @lb.command("icon_embed", "create an embed with server icon as image")
-# @lb.implements(lb.SlashSubCommand)
-# async def _create_icon_embed(ctx: lb.SlashContext):
-
-#     guild: t.Optional[hk.Guild] = ctx.get_guild()
-
-#     embed = hk.Embed()
-#     if guild:
-#         if ctx.options.render == "thumbnail":
-#             embed.set_thumbnail(guild.icon_url)
-
-#         elif ctx.options.render == "thumbnail":
-#             embed.set_image(guild.icon_url)
-
-#     if channel := ctx.options.channel:
-#         await ctx.bot.rest.create_message(channel.id, embed=embed)
-
-#     else:
-#         await ctx.bot.rest.create_message(ctx.channel_id, embed=embed)
-
-
 @create_command.child
 @lb.option("url", "url of that will be bound to the title of the embed", required=False)
 @lb.option("title", "title of the embed", required=False)
