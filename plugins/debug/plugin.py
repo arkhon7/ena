@@ -1,8 +1,7 @@
 import lightbulb as lb
-
+import hikari as hk
 from ena.cache import EnaCache
 from ena.database import EnaDatabase
-
 
 plugin = lb.Plugin("debug-plugin")
 
@@ -50,3 +49,15 @@ async def _test_get_cache(ctx: lb.SlashContext):
     if cache_slice:
 
         await ctx.respond(cache_slice["jma"])
+
+
+@plugin.command
+@lb.command("test_embed", "testttt")
+@lb.implements(lb.SlashCommand)
+async def _test_embed(ctx: lb.SlashContext):
+
+    embed = hk.Embed()
+
+    embed._author = hk.EmbedAuthor(name="marky")
+
+    await ctx.respond(embed=embed)

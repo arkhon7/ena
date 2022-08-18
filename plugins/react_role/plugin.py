@@ -23,7 +23,7 @@ from ena.helpers import create_emoji_code
 from ena.helpers import create_hash
 from ena.helpers import parse_message_from_link
 
-plugin = lb.Plugin("reaction-role-plugin", include_datastore=True)
+plugin = lb.Plugin("react-role-plugin", include_datastore=True)
 
 
 @plugin.command
