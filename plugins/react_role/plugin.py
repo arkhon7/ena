@@ -41,8 +41,8 @@ async def react_role():
 @lb.command("create_pair", "create an emoji-role pair for reaction roles in your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _create_pair(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
 
     role: hikari.Role = ctx.options.role
     emoji_id: int = int(ctx.options.emoji_id)
@@ -73,8 +73,8 @@ async def _create_pair(ctx: lb.SlashContext):
 @lb.command("delete_pair", "delete an emoji-role pair from your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _delete_pair(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
     id: str = ctx.options.id
 
     if guild_id := ctx.guild_id:
@@ -88,8 +88,8 @@ async def _delete_pair(ctx: lb.SlashContext):
 @lb.command("info", "get the info of a emoji-role pair", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _info_pair(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
     id: str = ctx.options.id
 
     guild_id = ctx.guild_id
@@ -122,8 +122,8 @@ async def _info_pair(ctx: lb.SlashContext):
 @lb.command("all_pairs", "get all emoji-role pairs from your guild", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _all_pairs(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
 
     guild_id = ctx.guild_id
 
@@ -152,8 +152,8 @@ async def _all_pairs(ctx: lb.SlashContext):
 @lb.command("mount", "mount an emoji-role pair to your message", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _mount_pair_to_message(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
 
     pair_id: str = ctx.options.id
     link = ctx.options.link
@@ -197,8 +197,8 @@ async def _mount_pair_to_message(ctx: lb.SlashContext):
 @lb.command("unmount", "unmount an emoji-role pair from a message", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def _unmount_pair_to_message(ctx: lb.SlashContext):
-    database: EnaDatabase = ctx.bot.d.ENA_DATABASE
-    cache: EnaCache = ctx.bot.d.ENA_CACHE
+    database: EnaDatabase = ctx.bot.d.database
+    cache: EnaCache = ctx.bot.d.cache
 
     pair_id: str = ctx.options.id
     link = ctx.options.link
@@ -227,8 +227,8 @@ async def _unmount_pair_to_message(ctx: lb.SlashContext):
 # LISTENERS
 @plugin.listener(hikari.GuildReactionAddEvent)
 async def _handle_add_reaction(event: hikari.GuildReactionAddEvent):
-    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
-    cache: EnaCache = plugin.bot.d.ENA_CACHE
+    database: EnaDatabase = plugin.bot.d.database
+    cache: EnaCache = plugin.bot.d.cache
 
     if app := plugin.bot.application:
         if event.user_id != app.id:
@@ -253,8 +253,8 @@ async def _handle_add_reaction(event: hikari.GuildReactionAddEvent):
 
 @plugin.listener(hikari.GuildReactionDeleteEvent)
 async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
-    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
-    cache: EnaCache = plugin.bot.d.ENA_CACHE
+    database: EnaDatabase = plugin.bot.d.database
+    cache: EnaCache = plugin.bot.d.cache
 
     records = await fetch_all_active_pairs_by_message(
         database,
@@ -278,8 +278,8 @@ async def _handle_delete_reaction(event: hikari.GuildReactionDeleteEvent):
 
 @plugin.listener(hikari.GuildMessageDeleteEvent)
 async def _handle_delete_message(event: hikari.GuildMessageDeleteEvent):
-    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
-    cache: EnaCache = plugin.bot.d.ENA_CACHE
+    database: EnaDatabase = plugin.bot.d.database
+    cache: EnaCache = plugin.bot.d.cache
     await delete_all_active_pairs_by_message(
         database,
         cache,
@@ -291,8 +291,8 @@ async def _handle_delete_message(event: hikari.GuildMessageDeleteEvent):
 
 @plugin.listener(hikari.GuildReactionDeleteAllEvent)
 async def _handle_delete_all_reaction(event: hikari.GuildReactionDeleteAllEvent):
-    database: EnaDatabase = plugin.bot.d.ENA_DATABASE
-    cache: EnaCache = plugin.bot.d.ENA_CACHE
+    database: EnaDatabase = plugin.bot.d.database
+    cache: EnaCache = plugin.bot.d.cache
 
     await delete_all_active_pairs_by_message(
         database,
