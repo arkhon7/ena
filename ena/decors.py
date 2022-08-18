@@ -1,170 +1,71 @@
 import typing as t
-import hikari as hk
 import lightbulb as lb
 
-from aiocache.serializers import BaseSerializer
-from aiocache.plugins import BasePlugin
-from aiocache import Cache
 
-from ena.cache import EnaCache
-from ena.database import EnaDatabase
-
-
-def mount_plugins(plugins: t.List[str]):
+def injectable(injector: t.Callable[[lb.BotApp], lb.BotApp]):
     """
-    mounts plugins to the bot
+    a decorator that converts a function into an injectable, this
+    is used for organizing multiple dependencies in the bot.
 
-    PARAMETERS
-    ----------
+    PARAMETER
+    ---------
 
-    `plugins: t.List[str]`
+    `injector: t.Callable[[lb.BotApp], lb.BotApp]`
 
-    List of module/package names. The plugin must have a `load`
-    function in order for be read as a plugin.
+    A function with parameter `lightbulb.BotApp` and returns a
+    `lightbulb.BotApp` instance
 
-
-    """
-
-    def _func_wrap(func: t.Callable[[], lb.BotApp]):
-        def _():
-
-            bot = func()
-
-            for plugin in plugins:
-                bot.load_extensions(plugin)
-
-            return bot
-
-        return _
-
-    return _func_wrap
-
-
-def mount_database(dsn: str, schema: t.Optional[str] = None):
-    """
-    mounts the database to lb datastore and subscribes the necessary listeners
-    into the bot. The database instance is accessed on `bot.d.ENA_DATABASE`
-
-    PARAMETERS
-    ----------
-
-    `dsn: str`
-
-    The database uri of the client
-
-    `schema: str | None`
-
-    The path for schema, if specified, this executes the schema when the bot
-    starts
-
-
-    """
-
-    def _func_wrap(func: t.Callable[[], lb.BotApp]):
-        def _():
-
-            bot = func()
-            bot.d.ENA_DATABASE = EnaDatabase(dsn, schema)
-
-            return bot
-
-        return _
-
-    return _func_wrap
-
-
-def mount_listeners(listeners: t.List[t.Callable[[lb.BotApp], t.Tuple[hk.Event, t.Callable[[hk.Event], t.Any]]]]):
-    """
-    mounts custom listeners, this uses `lightbulb.BotApp.subscribe` function.
-
-
-    PARAMETERS
-    ----------
-
-    `listeners: ListenerT`
-
-    List of functions that takes the `lightbulb.BotApp` as an argument and returns
-    an event type and a callback
-
-    Example
+    EXAMPLE
     -------
-    ```py
-    # Writing a listener function
-    def load_presence(bot: lightbulb.BotApp):
-        async def _callback(event: hikari.StartedEvent)
-            await bot.update_presence(...)
-        return hk.StartedEvent, _callback
-    ...
 
-    # mounting the listener function to the bot
-    @mount_listeners([
-        load_presence
-    ])
-    def build_bot():
-        bot = lightbulb.BotApp(...)
-        return bot
-    ```
+    TODO
     """
 
-    def _func_wrap(func: t.Callable[[], lb.BotApp]):
-        def _():
+    def main_wrapper(func: t.Callable[[lb.BotApp], lb.BotApp]):
+        def _(bot: lb.BotApp):
 
-            bot = func()
-
-            for listener in listeners:
-                event_type, callback = listener(bot)
-                bot.subscribe(event_type, callback)
-
-            return bot
+            return func(injector(bot))
 
         return _
 
-    return _func_wrap
+    return main_wrapper
 
 
-def mount_cache(
-    serializer: t.Optional[BaseSerializer] = None,
-    plugins: t.Optional[BasePlugin] = None,
-    namespace: t.Optional[str] = None,
-    timeout: t.Union[int, float] = 5,
-):
+def store(data: t.Dict[str, t.Any]):
 
     """
-    mounts an `aiocache.Cache.MEMORY` instance to the datastore of the bot.
-    The cache instance is accessed on `bot.d.ENA_CACHE`
+    a decorator that puts configs inside the bot's datastore. This
+    must be used to a function that returns your bot instance if
+    you're trying to inject a bot/plugin dependency
 
     PARAMETERS
     ----------
 
-    `serializer: aiocache.serializers.BaseSerializer | None`
+    `config: t.Dict[str, t.Any]`
+    A dictionary with the key-value pairs of data
 
-    The serializer to be used in serializing cache
+    EXAMPLE
+    -------
 
-    `plugins: t.List[aiocache.plugins.BasePlugin] | None`
+    ```py
+    @store({
+        "API_KEY": os.getenv("API_KEY"),
+    })
+    def build_bot():
 
-    The list of `BasePlugin` to be used in the cache
+        return lightbulb.BotApp(...)
+    ```
 
-    `namespace: str | None`
-
-    The namespace for the cache
-
-    `timeout: int | float = 5`
-
-    The timeout for cache operations
     """
 
-    def _func_wrap(func: t.Callable[[], lb.BotApp]):
-        def _():
+    def _func_wrap(func: t.Callable[[lb.BotApp], lb.BotApp]):
+        def _(bot: lb.BotApp):
 
-            bot = func()
+            bot = func(bot)
 
-            bot.d.ENA_CACHE = Cache(
-                cache_class=EnaCache,
-                serializer=serializer,
-                plugins=plugins,
-                namespace=namespace,
-                timeout=timeout,
-            )
+            for key, value in data.items():
+
+                bot.d[key] = value
 
             return bot
 
