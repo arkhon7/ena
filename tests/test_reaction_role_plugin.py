@@ -500,46 +500,46 @@ async def test_speed_cached(database: EnaDatabase, cache: EnaCache, aio_benchmar
 
     @aio_benchmark
     async def _():
-        for _ in range(100):
+        for _ in range(1000):
             await fetch_all_pairs(database, cache, GUILD_ID)
 
 
-# @pytest.mark.asyncio
-# async def test_caching_fetched_active_pairs(database, cache, aio_benchmark):
-#     erp_mock = get_mock_pair_list()
-#     aerp_mock = get_mock_active_pair_list()
+@pytest.mark.asyncio
+async def test_caching_fetched_active_pairs(database, cache, aio_benchmark):
+    erp_mock = get_mock_pair_list()
+    aerp_mock = get_mock_active_pair_list()
 
-#     for erp in erp_mock:
+    for erp in erp_mock:
 
-#         await add_pair(
-#             database,
-#             cache,
-#             erp.id,
-#             erp.role_id,
-#             erp.emoji_id,
-#             erp.emoji_name,
-#             erp.is_animated,
-#             erp.guild_id,
-#         )
+        await add_pair(
+            database,
+            cache,
+            erp.id,
+            erp.role_id,
+            erp.emoji_id,
+            erp.emoji_name,
+            erp.is_animated,
+            erp.guild_id,
+        )
 
-#     # Insert active pair data
-#     for aerp in aerp_mock:
-#         pair_id = create_hash(
-#             aerp.role_id,
-#             aerp.emoji_name,
-#         )
+    # Insert active pair data
+    for aerp in aerp_mock:
+        pair_id = create_hash(
+            aerp.role_id,
+            aerp.emoji_name,
+        )
 
-#         await add_active_pair(
-#             database,
-#             cache,
-#             aerp.id,
-#             pair_id,
-#             aerp.message_id,
-#             aerp.channel_id,
-#             aerp.guild_id,
-#         )
+        await add_active_pair(
+            database,
+            cache,
+            aerp.id,
+            pair_id,
+            aerp.message_id,
+            aerp.channel_id,
+            aerp.guild_id,
+        )
 
-#     @aio_benchmark
-#     async def _benchmarks():
-#         for _ in range(1000):
-#             await fetch_all_active_pairs_by_message(database, cache, aerp_mock[0].message_id, GUILD_ID)
+    @aio_benchmark
+    async def _benchmarks():
+        for _ in range(1000):
+            await fetch_all_active_pairs_by_message(database, cache, aerp_mock[0].message_id, GUILD_ID)

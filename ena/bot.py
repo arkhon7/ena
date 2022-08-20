@@ -132,25 +132,16 @@ def cache(bot: lb.BotApp):
     return bot
 
 
-@injectable
-@default_plugins
-@default_listeners
-def defaults(bot: lb.BotApp):
-
-    return bot
-
-
 @cache
 @database
-@defaults
+@default_plugins
+@default_listeners
 def ena(bot: lb.BotApp) -> lb.BotApp:
 
     return bot
 
 
 # constructor
-
-
 def build_bot() -> lb.BotApp:
     bot = lb.BotApp(
         token=TOKEN,

@@ -9,17 +9,6 @@ from ena.cache import EnaCache
 logging = logging.getLogger(__name__)  # type:ignore
 
 
-# cache shapes
-class EmojiRolePairCache(t.TypedDict):
-    ids: t.Dict[str, asyncpg.Record]
-    by_message: t.Dict[int, t.List[asyncpg.Record]]
-    by_guild: t.List[asyncpg.Record]
-
-
-class ActiveEmojiRolePairCache(t.TypedDict):
-    by_message: t.Dict[int, t.List[asyncpg.Record]]
-
-
 async def fetch_all_pairs(database: EnaDatabase, cache: EnaCache, guild_id: int) -> t.Optional[t.List[asyncpg.Record]]:
 
     query = """
@@ -28,34 +17,10 @@ async def fetch_all_pairs(database: EnaDatabase, cache: EnaCache, guild_id: int)
     WHERE guild_id = $1
     """
 
-    key = "{}:erp".format(guild_id)
-    cached_slice: EmojiRolePairCache = await cache.get(key)
+    fetch = cache.cached([(guild_id, "emoji_role_pairs"), "list"], database.fetch, ttl=300)
+    records = await fetch(query, guild_id, timeout=5)
 
-    if cached_slice:
-        cached: t.List[asyncpg.Record] = cached_slice["by_guild"]
-
-        if len(cached) != 0:
-            return cached
-
-        else:
-            # cache if slice found but role pairs by guild is empty
-            records = await database.fetch(query, guild_id, timeout=5)
-            cached_slice["by_guild"] = records
-
-            await cache.set(key, value=cached_slice)
-            #
-
-            return records
-
-    else:
-        records = await database.fetch(query, guild_id, timeout=5)
-
-        # cache if no slice found
-        slice: EmojiRolePairCache = {"ids": {}, "by_guild": records}
-        await cache.set(key, value=slice)
-        #
-
-        return records
+    return records
 
 
 async def fetch_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: int) -> t.Optional[asyncpg.Record]:
@@ -65,28 +30,13 @@ async def fetch_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: 
     WHERE id = $1
     AND guild_id = $2
     """
-    key = "{}:erp".format(guild_id)
-    cached_slice: EmojiRolePairCache = await cache.get(key)
 
-    if cached_slice:
-        cached_ids: t.Dict[str, t.Any] = cached_slice["ids"]
+    #
+    fetchrow = cache.cached([(guild_id, "emoji_role_pairs"), "ids", id], database.fetchrow, ttl=300)
+    record = await fetchrow(query, id, guild_id, timeout=5)
 
-        if cached := cached_ids.get(id):
-            return cached
-
-        else:
-            record = await database.fetchrow(query, id, guild_id, timeout=5)
-            cached_slice["ids"][id] = record
-
-            await cache.set(key, value=cached_slice)
-
-            return record
-
-    else:
-        record = await database.fetchrow(query, id, guild_id, timeout=5)
-        slice: EmojiRolePairCache = {"ids": {id: record}, "by_guild": []}
-        await cache.set(key, value=slice)
-        return record
+    return record
+    #
 
 
 async def add_pair(
@@ -117,11 +67,8 @@ async def add_pair(
     )
 
     # refresh cache
-    key = "{}:erp".format(guild_id)
-    await cache.delete(key)
-
-    key = "{}:aerp".format(guild_id)
-    await cache.delete(key)
+    await cache.delete((guild_id, "emoji_role_pairs"))
+    await cache.delete((guild_id, "active_emoji_role_pairs"))
 
 
 async def delete_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id: int):
@@ -139,11 +86,8 @@ async def delete_pair(database: EnaDatabase, cache: EnaCache, id: str, guild_id:
     )
 
     # refresh cache
-    key = "{}:erp".format(guild_id)
-    await cache.delete(key)
-
-    key = "{}:aerp".format(guild_id)
-    await cache.delete(key)
+    await cache.delete((guild_id, "emoji_role_pairs"))
+    await cache.delete((guild_id, "active_emoji_role_pairs"))
 
 
 # active emoji role pairs table
@@ -166,40 +110,16 @@ async def fetch_all_active_pairs_by_message(database: EnaDatabase, cache: EnaCac
     AND aerp.guild_id = $2
     """
 
-    key = "{}:aerp".format(guild_id)
-    cached_slice: ActiveEmojiRolePairCache = await cache.get(key)
+    #
+    fetch = cache.cached(
+        [(guild_id, "active_emoji_role_pairs"), message_id],
+        database.fetch,
+        ttl=300,
+    )
 
-    if cached_slice:
-        cached_aerp_by_msg: t.Dict[int, t.List] = cached_slice["by_message"]
-
-        if cached := cached_aerp_by_msg.get(message_id):
-            if cached:
-                return cached
-        else:
-            records = await database.fetch(
-                query,
-                message_id,
-                guild_id,
-            )
-
-            cached_slice["by_message"][message_id] = records
-
-            await cache.set(key, value=cached_slice)
-
-            return records
-
-    else:
-
-        records = await database.fetch(
-            query,
-            message_id,
-            guild_id,
-        )
-
-        slice: ActiveEmojiRolePairCache = {"by_message": {message_id: records}}
-        await cache.set(key, value=slice)
-
-        return records
+    records = await fetch(query, message_id, guild_id, timeout=5)
+    return records
+    #
 
 
 async def add_active_pair(
@@ -227,8 +147,7 @@ async def add_active_pair(
         guild_id,
     )
 
-    key = "{}:aerp".format(guild_id)
-    await cache.delete(key)
+    await cache.delete((guild_id, "active_emoji_role_pairs"))
 
 
 async def delete_active_pair(
@@ -255,8 +174,7 @@ async def delete_active_pair(
         guild_id,
         timeout=5,
     )
-    key = "{}:aerp".format(guild_id)
-    await cache.delete(key)
+    await cache.delete((guild_id, "active_emoji_role_pairs"))
 
 
 async def delete_all_active_pairs_by_message(
@@ -281,8 +199,4 @@ async def delete_all_active_pairs_by_message(
         timeout=5,
     )
 
-    key = "{}:aerp".format(guild_id)
-    await cache.delete(key)
-
-
-# TODO implement a cache struct
+    await cache.delete((guild_id, "active_emoji_role_pairs"))
