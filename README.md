@@ -3,6 +3,7 @@
 A multipurpose discord bot for my own server. It uses PostgresSQL database and [hikari.py](https://github.com/hikari-py/hikari) python discord library. This still lacks a lot of features but i'm confident that you can extend it properly.
 
 ### Roadmap
+
 |  progress  | plugin |
 | --- | --- |
 | ![](https://geps.dev/progress/60)  | `reaction role`  |
