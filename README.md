@@ -6,10 +6,9 @@ A multipurpose discord bot for my own server. It uses PostgresSQL database and [
 
 |  progress  | plugin |
 | --- | --- |
-| ![](https://geps.dev/progress/60)  | `reaction role`  |
-| ![](https://geps.dev/progress/10)  | `templating` |
+| ![](https://geps.dev/progress/0)  | `embed_utils`  |
+| ![](https://geps.dev/progress/0)  | `saucenao api` |
 | ![](https://geps.dev/progress/0)  | `genshin codes` |
-| ![](https://geps.dev/progress/0)  | `code` |
 
 #### Adding plugins
 If you are knowledgeable on using hikari, it should be easy to extend the bot with plugins and customizations using the `injectable` decorator of the bot:
