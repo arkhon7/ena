@@ -65,7 +65,6 @@ python-versions = ">=3.6.2"
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0"
-typing-extensions = {version = ">=3.10", markers = "python_version < \"3.10\""}
 wrapt = ">=1.11,<2"
 
 [[package]]
@@ -125,7 +124,6 @@ mypy-extensions = ">=0.4.3"
 pathspec = ">=0.9.0"
 platformdirs = ">=2"
 tomli = {version = ">=1.1.0", markers = "python_full_version < \"3.11.0a7\""}
-typing-extensions = {version = ">=3.10.0.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 colorama = ["colorama (>=0.4.3)"]
@@ -135,7 +133,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "charset-normalizer"
-version = "2.1.0"
+version = "2.1.1"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 category = "main"
 optional = false
@@ -435,7 +433,6 @@ mccabe = ">=0.6,<0.8"
 platformdirs = ">=2.2.0"
 tomli = {version = ">=1.1.0", markers = "python_version < \"3.11\""}
 tomlkit = ">=0.10.1"
-typing-extensions = {version = ">=3.10.0", markers = "python_version < \"3.10\""}
 
 [package.extras]
 testutils = ["gitpython (>3)"]
@@ -517,18 +514,6 @@ elasticsearch = ["elasticsearch"]
 histogram = ["pygal", "pygaljs"]
 
 [[package]]
-name = "pytest-catchlog"
-version = "1.2.2"
-description = "py.test plugin to catch log messages. This is a fork of pytest-capturelog."
-category = "dev"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-py = ">=1.1.1"
-pytest = ">=2.6"
-
-[[package]]
 name = "python-dotenv"
 version = "0.19.2"
 description = "Read key-value pairs from a .env file and set them as environment variables"
@@ -557,7 +542,7 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "tomlkit"
-version = "0.11.3"
+version = "0.11.4"
 description = "Style preserving TOML library"
 category = "dev"
 optional = false
@@ -593,8 +578,8 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = "3.9.6"
-content-hash = "534f0936327a1be42206fd9ff3e5b4c4901691897219681571f63a03705d8971"
+python-versions = "3.10.6"
+content-hash = "48a3d54866c8795ef2de54fcfd26c4522722e088794268de70c94764b26e5ae2"
 
 [metadata.files]
 aiocache = []
@@ -673,7 +658,6 @@ pysaucenao = []
 pytest = []
 pytest-asyncio = []
 pytest-benchmark = []
-pytest-catchlog = []
 python-dotenv = []
 simpleeval = [
     {file = "simpleeval-0.9.12-py2.py3-none-any.whl", hash = "sha256:d82faa7dc88379614ea3b385fd84cc24f0aa4853432e267718526e5aeac6b1b9"},

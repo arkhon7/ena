@@ -14,6 +14,8 @@ from ena.database import EnaDatabase
 from ena.cache import EnaCache
 from ena.decors import injectable
 
+from plugins.embed_utils import embed_utils_plugin
+
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -43,15 +45,11 @@ INTENTS = (
 @injectable
 def default_plugins(bot: lb.BotApp):
 
-    DEFAULT_PLUGINS = [
-        "plugins.debug",
-        "plugins.greet",
-        "plugins.templater",
-        "plugins.react_role",
-    ]
+    DEFAULT_PLUGINS = [embed_utils_plugin]
 
     for plugin in DEFAULT_PLUGINS:
-        bot.load_extensions(plugin)
+
+        bot.add_plugin(plugin)
 
     return bot
 
@@ -132,8 +130,8 @@ def cache(bot: lb.BotApp):
     return bot
 
 
+# @database no db (for now)
 @cache
-@database
 @default_plugins
 @default_listeners
 def ena(bot: lb.BotApp) -> lb.BotApp:
@@ -147,7 +145,6 @@ def build_bot() -> lb.BotApp:
         token=TOKEN,
         intents=INTENTS,
         default_enabled_guilds=DEFAULT_GUILDS,
-        banner="ena",
     )
 
     return ena(bot)
