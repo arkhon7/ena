@@ -11,7 +11,7 @@ A multipurpose discord bot for my own server. It uses PostgresSQL database and [
 | ![](https://geps.dev/progress/0)  | `genshin codes` |
 
 #### Adding plugins
-It should be easy to extend the bot with plugins and customizations using `hikari.py` plugins. You can use `injectable` decorator of the bot to modify it based to your liking:
+It should be easy to extend the bot with plugins and customizations using `injectable` decorator. You can use the decorator to modify the bot based to your liking:
 ```py
 # use injectable in a function that takes the bot as parameter and returns the bot.
 
