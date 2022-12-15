@@ -6,23 +6,25 @@ A multipurpose discord bot for my own server. It uses PostgresSQL database and [
 
 |  progress  | plugin |
 | --- | --- |
-| ![](https://geps.dev/progress/60)  | `reaction role`  |
-| ![](https://geps.dev/progress/10)  | `templating` |
+| ![](https://geps.dev/progress/0)  | `embed_utils`  |
+| ![](https://geps.dev/progress/0)  | `saucenao api` |
 | ![](https://geps.dev/progress/0)  | `genshin codes` |
-| ![](https://geps.dev/progress/0)  | `code` |
 
 #### Adding plugins
-If you are knowledgeable on using hikari, it should be easy to extend the bot with plugins and customizations using the `injectable` decorator of the bot:
+It should be easy to extend the bot with plugins and customizations using `injectable` decorator. You can use the decorator to modify the bot based to your liking:
 ```py
 # use injectable in a function that takes the bot as parameter and returns the bot.
+
+from your_plugins import your_nice_plugin
+
 @injectable
 def default_plugins(bot: lb.BotApp):
     
     DEFAULT_PLUGINS = [
-        "plugins.debug",
-        "plugins.react_role",
+        your_nice_plugin # a lightbulb.Plugin instance
     ]
-    # you can easily customize the bot here
+    
+    # you can easily customize the bot like this
     for plugin in DEFAULT_PLUGINS:
         bot.load_extensions(plugin)
 
