@@ -3,6 +3,9 @@ import hikari as hk
 
 from .funcs import EmbedBuilder
 
+from .engine import compile
+from ena.helpers import parse_message_from_link
+
 
 embed_utils_plugin = lb.Plugin("embed-utils-plugin")
 
@@ -12,6 +15,42 @@ embed_utils_plugin = lb.Plugin("embed-utils-plugin")
 @lb.implements(lb.SlashCommandGroup)
 async def embed_utils_group():
     pass
+
+
+@embed_utils_group.child
+@lb.option("template", "ena template", hk.OptionType.ATTACHMENT)
+@lb.option("message_link", "if set, this will edit the message on the link instead", required=False)
+@lb.option("channel", "channel to send the template to", hk.OptionType.CHANNEL, required=False)
+@lb.command("create_from_template", "create embeds from template", ephemeral=True)
+@lb.implements(lb.SlashSubCommand)
+async def create_from_template(ctx: lb.SlashContext):
+
+    raw_template: hk.Attachment = ctx.options.template
+    channel: hk.GuildChannel
+
+    template = await raw_template.read()
+
+    raw_embeds = compile(template.decode())
+    embeds = []
+    for raw_embed in raw_embeds:
+        embed = ctx.bot.entity_factory.deserialize_embed(payload=raw_embed)
+        embeds.append(embed)
+
+    if message_link := ctx.options.message_link:
+
+        msg_ref = parse_message_from_link(message_link)
+
+        await ctx.bot.rest.edit_message(msg_ref.channel_id, msg_ref.message_id, embeds=embeds)
+
+    else:
+        if channel := ctx.options.channel:
+            await ctx.bot.rest.create_message(channel.id, embeds=embeds)
+
+        else:
+
+            await ctx.bot.rest.create_message(ctx.channel_id, embeds=embeds)
+
+    await ctx.respond("Done creating from template!")
 
 
 @embed_utils_group.child

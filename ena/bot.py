@@ -11,7 +11,6 @@ from aiocache.plugins import HitMissRatioPlugin
 
 
 from ena.database import EnaDatabase
-from ena.cache import EnaCache
 from ena.decors import injectable
 
 from plugins.embed_utils import embed_utils_plugin
@@ -118,7 +117,7 @@ def cache(bot: lb.BotApp):
 
     KEY = "cache"
     CACHE = Cache(
-        cache_class=EnaCache,
+        cache_class=Cache.MEMORY,
         plugins=[
             HitMissRatioPlugin(),
             TimingPlugin(),
