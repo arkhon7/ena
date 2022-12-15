@@ -11,15 +11,17 @@ A multipurpose discord bot for my own server. It uses PostgresSQL database and [
 | ![](https://geps.dev/progress/0)  | `genshin codes` |
 
 #### Adding plugins
-If you are knowledgeable on using hikari, it should be easy to extend the bot with plugins and customizations using the `injectable` decorator of the bot:
+It should be easy to extend the bot with plugins and customizations using `hikari.py` plugins. You can use `injectable` decorator of the bot to modify it based to your liking:
 ```py
 # use injectable in a function that takes the bot as parameter and returns the bot.
+
+from your_plugins import your_nice_plugin
+
 @injectable
 def default_plugins(bot: lb.BotApp):
     
     DEFAULT_PLUGINS = [
-        "plugins.debug",
-        "plugins.react_role",
+        your_nice_plugin # an lightbulb.Plugin instance
     ]
     # you can easily customize the bot here
     for plugin in DEFAULT_PLUGINS:
