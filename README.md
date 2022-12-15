@@ -21,9 +21,10 @@ from your_plugins import your_nice_plugin
 def default_plugins(bot: lb.BotApp):
     
     DEFAULT_PLUGINS = [
-        your_nice_plugin # an lightbulb.Plugin instance
+        your_nice_plugin # a lightbulb.Plugin instance
     ]
-    # you can easily customize the bot here
+    
+    # you can easily customize the bot like this
     for plugin in DEFAULT_PLUGINS:
         bot.load_extensions(plugin)
 
