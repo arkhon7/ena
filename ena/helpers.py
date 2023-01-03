@@ -38,7 +38,7 @@ def create_message_link(guild_id: int, channel_id: int, message_id: int):
     return f"{DISCORD_MESSAGE_BASE_URL}/{guild_id}/{channel_id}/{message_id}"
 
 
-def parse_message_from_link(message_link: str) -> MessageRef:
+def parse_message_ref(message_link: str) -> MessageRef:
 
     NUMBER_REGEX = re.compile("([0-9]+)")
 

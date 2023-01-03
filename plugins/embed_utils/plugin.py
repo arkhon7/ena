@@ -1,9 +1,9 @@
 import lightbulb as lb
 import hikari as hk
 
-
 from paintcord import compile
-from ena.helpers import parse_message_from_link
+
+from ena.helpers import parse_message_ref
 
 
 embed_utils_plugin = lb.Plugin("embed-utils-plugin")
@@ -18,9 +18,9 @@ async def embed_utils_group():
 
 @embed_utils_group.child
 @lb.option("template", "ena template", hk.OptionType.ATTACHMENT)
-@lb.option("message_link", "if set, this will edit the message on the link instead", required=False)
+@lb.option("link", "this will edit the message on the given link", required=False)
 @lb.option("channel", "channel to send the template to", hk.OptionType.CHANNEL, required=False)
-@lb.command("create_from_template", "create embeds from template", ephemeral=True)
+@lb.command("template", "create embeds from template", ephemeral=True)
 @lb.implements(lb.SlashSubCommand)
 async def create_from_template(ctx: lb.SlashContext):
 
@@ -30,8 +30,6 @@ async def create_from_template(ctx: lb.SlashContext):
     template = await raw_template.read()
 
     req_body = compile(template.decode())
-
-    print(req_body)
 
     msg_body = req_body[0]
 
@@ -45,7 +43,7 @@ async def create_from_template(ctx: lb.SlashContext):
 
     if message_link := ctx.options.message_link:
 
-        msg_ref = parse_message_from_link(message_link)
+        msg_ref = parse_message_ref(message_link)
 
         await ctx.bot.rest.edit_message(
             msg_ref.channel_id, msg_ref.message_id, content=msg_body["content"], embeds=embeds

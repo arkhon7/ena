@@ -1,6 +1,7 @@
 import os
 import logging
 import dotenv
+import typing as t
 
 
 import hikari as hk
@@ -12,13 +13,31 @@ from aiocache.plugins import HitMissRatioPlugin
 
 
 from ena.database import EnaDatabase
-from ena.decors import injectable
 
 from plugins.embed_utils import embed_utils_plugin
 
 dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
+
+def injectable(injector: t.Callable[[lb.BotApp], lb.BotApp]):
+    """
+    a decorator that converts a function into an injectable, this
+    is used for organizing multiple dependencies in the bot.
+
+    """
+
+    def wrapper(func: t.Callable[[lb.BotApp], lb.BotApp]):
+        def _(bot: lb.BotApp):
+
+            return func(injector(bot))
+
+        return _
+
+    return wrapper
+
+
+# CONSTS
 
 TOKEN = os.getenv("TOKEN") or "NONE"
 
@@ -40,6 +59,9 @@ INTENTS = (
     | hk.Intents.GUILD_MEMBERS
     | hk.Intents.GUILDS
 )
+
+
+# INJECTIONS
 
 
 @injectable

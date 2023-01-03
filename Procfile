@@ -1,1 +1,1 @@
-Worker: python -O main.py
+Worker: python -O ena
