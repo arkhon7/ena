@@ -1,4 +1,4 @@
-from ena import build_bot
+from bot import build_bot
 
 if __name__ == "__main__":
     ena = build_bot()

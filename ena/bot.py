@@ -1,5 +1,6 @@
 import os
 import logging
+import dotenv
 
 
 import hikari as hk
@@ -15,7 +16,7 @@ from ena.decors import injectable
 
 from plugins.embed_utils import embed_utils_plugin
 
-
+dotenv.load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 
 

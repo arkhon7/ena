@@ -14,7 +14,7 @@ usefixtures = "setup_method"
 line-length = 120
 
 [tool.poetry.dependencies]
-python = "3.10.6"
+python = ">=3.10,<3.11"
 hikari-lightbulb = "^2.2.0"
 python-dotenv = "^0.19.2"
 simpleeval = "^0.9.12"
@@ -23,6 +23,7 @@ hikari-miru = "^1.1.1"
 asyncpg = "^0.26.0"
 aiocache = "^0.11.1"
 pysaucenao = "^1.6.1"
+paintcord = "0.0.3"
 
 
 [tool.poetry.dev-dependencies]
