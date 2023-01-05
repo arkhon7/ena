@@ -16,9 +16,9 @@ class MessageRef:
 
 def create_hash(*args) -> str:
     raw = "".join([str(arg) for arg in args])
-    hash = hashlib.md5(raw.encode()).hexdigest()
+    hashed = hashlib.md5(raw.encode()).hexdigest()
 
-    return hash
+    return hashed
 
 
 def create_emoji_code(emoji_id: int, emoji_name: str, is_animated: bool):

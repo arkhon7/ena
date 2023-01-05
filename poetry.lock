@@ -33,18 +33,6 @@ yarl = ">=1.0,<2.0"
 speedups = ["aiodns", "brotli", "cchardet"]
 
 [[package]]
-name = "aiohttp-proxy"
-version = "0.1.2"
-description = "Full-featured proxy connector for aiohttp"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-aiohttp = ">=2.3.2"
-yarl = "*"
-
-[[package]]
 name = "aiosignal"
 version = "1.3.1"
 description = "aiosignal: a list of registered asynchronous callbacks"
@@ -291,7 +279,7 @@ plugins = ["setuptools"]
 
 [[package]]
 name = "lazy-object-proxy"
-version = "1.8.0"
+version = "1.9.0"
 description = "A fast and thorough lazy object proxy."
 category = "dev"
 optional = false
@@ -372,15 +360,15 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "platformdirs"
-version = "2.6.0"
+version = "2.6.2"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
-docs = ["furo (>=2022.9.29)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.19.4)", "sphinx (>=5.3)"]
-test = ["appdirs (==1.4.4)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2)"]
+docs = ["furo (>=2022.12.7)", "proselint (>=0.13)", "sphinx-autodoc-typehints (>=1.19.5)", "sphinx (>=5.3)"]
+test = ["appdirs (==1.4.4)", "covdefaults (>=2.2.2)", "pytest-cov (>=4)", "pytest-mock (>=3.10)", "pytest (>=7.2)"]
 
 [[package]]
 name = "pluggy"
@@ -439,18 +427,6 @@ tomlkit = ">=0.10.1"
 [package.extras]
 spelling = ["pyenchant (>=3.2,<4.0)"]
 testutils = ["gitpython (>3)"]
-
-[[package]]
-name = "pysaucenao"
-version = "1.6.1"
-description = "PySauceNao is an unofficial asynchronous library for the SauceNao API. It supports lookups via URL or from the local filesystem."
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-aiohttp = "*"
-aiohttp-proxy = "*"
 
 [[package]]
 name = "pytest"
@@ -515,14 +491,6 @@ python-versions = ">=3.5"
 cli = ["click (>=5.0)"]
 
 [[package]]
-name = "simpleeval"
-version = "0.9.12"
-description = "A simple, safe single expression evaluator library."
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -568,13 +536,12 @@ multidict = ">=4.0"
 
 [metadata]
 lock-version = "1.1"
-python-versions = ">=3.10,<3.11"
-content-hash = "3d1a91047f0f1c81d9ce592552e70edaa7cd130356e03ede862069fa495f0013"
+python-versions = "3.10.6"
+content-hash = "36d225499281c6d947413cc74c8c7f4d60b0b18e95e25b5032ff7678fcfe0ba6"
 
 [metadata.files]
 aiocache = []
 aiohttp = []
-aiohttp-proxy = []
 aiosignal = []
 astroid = []
 async-timeout = []
@@ -610,12 +577,10 @@ py-cpuinfo = []
 pycodestyle = []
 pyflakes = []
 pylint = []
-pysaucenao = []
 pytest = []
 pytest-asyncio = []
 pytest-benchmark = []
 python-dotenv = []
-simpleeval = []
 tomli = []
 tomlkit = []
 typing-extensions = []

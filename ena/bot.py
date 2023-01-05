@@ -12,8 +12,7 @@ from aiocache.plugins import TimingPlugin
 from aiocache.plugins import HitMissRatioPlugin
 
 
-from ena.database import EnaDatabase
-
+# from ena.database import EnaDatabase
 from plugins.embed_utils import embed_utils_plugin
 
 dotenv.load_dotenv()
@@ -35,30 +34,6 @@ def injectable(injector: t.Callable[[lb.BotApp], lb.BotApp]):
         return _
 
     return wrapper
-
-
-# CONSTS
-
-TOKEN = os.getenv("TOKEN") or "NONE"
-
-DSN = os.getenv("DB_STRING") or "NONE"
-
-SCHEMA = "db/schema.psql"
-
-DEFAULT_GUILDS = (
-    957116703374979093,
-    938374580244979764,
-    938346141723033600,
-)
-
-INTENTS = (
-    hk.Intents.ALL_PRIVILEGED
-    | hk.Intents.DM_MESSAGE_REACTIONS
-    | hk.Intents.GUILD_MESSAGE_REACTIONS
-    | hk.Intents.GUILD_MESSAGES
-    | hk.Intents.GUILD_MEMBERS
-    | hk.Intents.GUILDS
-)
 
 
 # INJECTIONS
@@ -94,51 +69,9 @@ def default_listeners(bot: lb.BotApp):
 
 
 @injectable
-def database(bot: lb.BotApp):
-
-    SCHEMA = "db/schema.psql"
-    DSN = os.getenv("DB_STRING") or "NONE"
-    KEY = "database"
-
-    DATABASE = EnaDatabase(dsn=DSN, schema=SCHEMA)
-
-    bot.d[KEY] = DATABASE
-
-    # event listeners
-    async def init(_: hk.StartingEvent):
-
-        database: EnaDatabase = bot.d[KEY]
-
-        await database.connect()
-        await database.create_schema()
-        await database.insert_default_guild_ids(bot.default_enabled_guilds)
-
-    async def add_guild(event: hk.GuildJoinEvent):
-
-        database: EnaDatabase = bot.d[KEY]
-        guild_id = event.guild_id
-
-        await database.execute("INSERT INTO guilds VALUES ($1)", event.guild_id)
-        logging.info("added guild '{}'".format(guild_id))
-
-    async def remove_guild(event: hk.GuildLeaveEvent):
-        database: EnaDatabase = bot.d.ENA_DATABASE
-        guild_id = event.guild_id
-
-        await database.execute("DELETE FROM guilds WHERE id = $1", guild_id)
-        logging.info("removed guild '{}'".format(guild_id))
-
-    bot.subscribe(hk.StartingEvent, init)
-    bot.subscribe(hk.GuildJoinEvent, add_guild)
-    bot.subscribe(hk.GuildLeaveEvent, remove_guild)
-
-    return bot
-
-
-@injectable
 def cache(bot: lb.BotApp):
 
-    KEY = "cache"
+    CACHE_MAPPING_KEY = "cache"
     CACHE = Cache(
         cache_class=Cache.MEMORY,
         plugins=[
@@ -147,26 +80,90 @@ def cache(bot: lb.BotApp):
         ],
     )
 
-    bot.d[KEY] = CACHE
+    bot.d[CACHE_MAPPING_KEY] = CACHE
 
     return bot
 
 
-# @database no db (for now)
+# @injectable
+# def database(bot: lb.BotApp):
+
+#     SCHEMA = "db/schema.psql"
+
+#     DSN = os.getenv("DB_STRING") or "NONE"
+
+#     DATABASE_MAPPING_KEY = "database"
+
+#     DATABASE = EnaDatabase(dsn=DSN, schema=SCHEMA)
+
+#     bot.d[DATABASE_MAPPING_KEY] = DATABASE
+
+#     # event listeners
+#     async def init(_: hk.StartingEvent):
+
+#         database: EnaDatabase = bot.d[DATABASE_MAPPING_KEY]
+
+#         await database.connect()
+#         await database.create_schema()
+#         await database.insert_default_guild_ids(bot.default_enabled_guilds)
+
+#     async def add_guild(event: hk.GuildJoinEvent):
+
+#         database: EnaDatabase = bot.d[DATABASE_MAPPING_KEY]
+#         guild_id = event.guild_id
+
+#         await database.execute("INSERT INTO guilds VALUES ($1)", event.guild_id)
+#         logging.info("added guild '{}'".format(guild_id))
+
+#     async def remove_guild(event: hk.GuildLeaveEvent):
+
+#         database: EnaDatabase = bot.d[DATABASE_MAPPING_KEY]
+#         guild_id = event.guild_id
+
+#         await database.execute("DELETE FROM guilds WHERE id = $1", guild_id)
+#         logging.info("removed guild '{}'".format(guild_id))
+
+#     bot.subscribe(hk.StartingEvent, init)
+#     bot.subscribe(hk.GuildJoinEvent, add_guild)
+#     bot.subscribe(hk.GuildLeaveEvent, remove_guild)
+
+#     return bot
+
+
+# @database # no db (for now)
 @cache
 @default_plugins
 @default_listeners
-def ena(bot: lb.BotApp) -> lb.BotApp:
+def enafied(bot: lb.BotApp) -> lb.BotApp:
 
     return bot
 
 
-# constructor
-def build_bot() -> lb.BotApp:
+# run bot here
+def run():
+    TOKEN = os.getenv("TOKEN") or "NONE"
+
+    DEFAULT_GUILDS = (
+        957116703374979093,
+        938374580244979764,
+        938346141723033600,
+    )
+
+    INTENTS = (
+        hk.Intents.ALL_PRIVILEGED
+        | hk.Intents.DM_MESSAGE_REACTIONS
+        | hk.Intents.GUILD_MESSAGE_REACTIONS
+        | hk.Intents.GUILD_MESSAGES
+        | hk.Intents.GUILD_MEMBERS
+        | hk.Intents.GUILDS
+    )
+
     bot = lb.BotApp(
         token=TOKEN,
         intents=INTENTS,
         default_enabled_guilds=DEFAULT_GUILDS,
     )
 
-    return ena(bot)
+    ena = enafied(bot)
+
+    ena.run()
